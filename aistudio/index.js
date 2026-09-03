@@ -40,13 +40,41 @@ export function status() {
   return { name: 'aistudio', state: client ? 'running' : 'idle' };
 }
 
-export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = null }) {
-  if (!client) {
-    const { apiKey } = loadConfig();
-    if (!apiKey) throw new Error('aistudio: No API key configured.');
-    client = new GoogleGenAI({ apiKey });
+async function getClient() {
+  if (client) return client;
+  const { apiKey } = loadConfig();
+  if (!apiKey) throw new Error('aistudio: No API key configured.');
+  client = new GoogleGenAI({ apiKey });
+  return client;
+}
+
+export async function listModels() {
+  const availableClient = await getClient();
+  const models = [];
+  for await (const model of await availableClient.models.list()) {
+    const methods = model.supportedGenerationMethods || [];
+    if (!methods.includes('generateContent')) continue;
+    models.push({
+      id: model.name.replace(/^models\//, ''),
+      name: model.displayName || model.name,
+      provider: 'aistudio',
+      description: model.description || '',
+      limits: {
+        inputTokens: model.inputTokenLimit || null,
+        outputTokens: model.outputTokenLimit || null
+      },
+      capabilities: {
+        chat: true,
+        tools: methods.includes('generateContent')
+      }
+    });
   }
-  const response = await client.models.generateContent({
+  return models.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = null }) {
+  const availableClient = await getClient();
+  const response = await availableClient.models.generateContent({
     model,
     contents: prompt,
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined
@@ -59,5 +87,6 @@ export default {
   start,
   stop,
   status,
+  listModels,
   generate
 };

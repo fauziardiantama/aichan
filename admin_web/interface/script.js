@@ -29,6 +29,7 @@ document.querySelectorAll('nav a').forEach(link => {
 let currentConfigModule = null;
 let moduleManifests = [];
 let activePromptId = null;
+let availableModels = [];
 
 async function loadManifests() {
   try {
@@ -142,6 +143,7 @@ async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const chatArea = document.getElementById('chatMessagesArea');
   const modelSelect = document.getElementById('modelSelect');
+  const providerSelect = document.getElementById('providerSelect');
   const promptSelect = document.getElementById('promptSelect');
   const btnSend = document.getElementById('btnSendChat');
   const chatStatus = document.getElementById('chatStatus');
@@ -150,7 +152,12 @@ async function sendChatMessage() {
   const prompt = input.value.trim();
   if (!prompt) return;
 
-  const model = modelSelect ? modelSelect.value : 'gemini-3.5-flash';
+  const provider = providerSelect?.value;
+  const model = modelSelect?.value;
+  if (!provider || !model) {
+    if (chatStatus) chatStatus.textContent = '[Error] Select an available provider and model first.';
+    return;
+  }
 
   // Append user message bubble
   const userMsgDiv = document.createElement('div');
@@ -167,21 +174,21 @@ async function sendChatMessage() {
   const aiMsgDiv = document.createElement('div');
   aiMsgDiv.className = 'chat-message ai';
   aiMsgDiv.innerHTML = `
-    <div class="chat-author">Ai-Chan // ${escapeHtml(model)}</div>
+    <div class="chat-author">Ai-Chan // ${escapeHtml(provider)} // ${escapeHtml(model)}</div>
     <div class="chat-bubble" style="color: #888; font-style: italic;">Generating response...</div>
   `;
   chatArea.appendChild(aiMsgDiv);
   chatArea.scrollTop = chatArea.scrollHeight;
 
   if (btnSend) btnSend.disabled = true;
-  if (chatStatus) chatStatus.textContent = `[Processing] Calling aistudio with model ${model}...`;
+  if (chatStatus) chatStatus.textContent = `[Processing] Calling ${provider} with model ${model}...`;
 
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        module: 'aistudio',
+        module: provider,
         prompt,
         model,
         promptCodename: promptSelect ? promptSelect.value : undefined
@@ -211,6 +218,36 @@ async function sendChatMessage() {
   } finally {
     if (btnSend) btnSend.disabled = false;
     chatArea.scrollTop = chatArea.scrollHeight;
+  }
+}
+
+function updateProviderModels() {
+  const providerSelect = document.getElementById('providerSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  if (!providerSelect || !modelSelect) return;
+  const models = availableModels.filter(model => model.provider === providerSelect.value);
+  modelSelect.innerHTML = models.map(model => `<option value="${escapeHtml(model.id)}">${escapeHtml(model.name)}</option>`).join('');
+}
+
+async function loadModels() {
+  const providerSelect = document.getElementById('providerSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  if (!providerSelect || !modelSelect) return;
+  try {
+    const res = await fetch('/api/models');
+    const data = await res.json();
+    availableModels = data.models || [];
+    const providers = [...new Set(availableModels.map(model => model.provider))];
+    providerSelect.innerHTML = providers.map(provider => `<option value="${escapeHtml(provider)}">${escapeHtml(provider)}</option>`).join('');
+    updateProviderModels();
+    if (!providers.length) {
+      providerSelect.innerHTML = '<option value="">No configured providers</option>';
+      modelSelect.innerHTML = '<option value="">No available models</option>';
+    }
+  } catch (err) {
+    providerSelect.innerHTML = '<option value="">Model discovery failed</option>';
+    modelSelect.innerHTML = '<option value="">No available models</option>';
+    console.error('Failed to load models:', err);
   }
 }
 
@@ -298,6 +335,7 @@ function initChatListeners() {
   const chatInput = document.getElementById('chatInput');
   const btnClear = document.getElementById('btnClearChat');
   const savePromptButton = document.getElementById('savePrompt');
+  const providerSelect = document.getElementById('providerSelect');
 
   if (btnSend) {
     btnSend.addEventListener('click', sendChatMessage);
@@ -324,6 +362,8 @@ function initChatListeners() {
     });
   }
   if (savePromptButton) savePromptButton.addEventListener('click', savePrompt);
+  if (providerSelect) providerSelect.addEventListener('change', updateProviderModels);
+  updateProviderModels();
 }
 
 if (document.readyState === 'loading') {
@@ -334,4 +374,5 @@ if (document.readyState === 'loading') {
 
 loadManifests();
 loadPrompts();
+loadModels();
 document.getElementById('chatSearch')?.addEventListener('input', loadChats);

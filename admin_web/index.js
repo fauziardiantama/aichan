@@ -60,6 +60,25 @@ export function start(options = {}) {
       return;
     }
 
+    if (req.method === 'GET' && pathname === '/api/models') {
+      Promise.all(registeredModules
+        .filter(module => typeof module.listModels === 'function')
+        .map(async module => {
+          const manifest = module.manifest || (module.default && module.default.manifest) || {};
+          try {
+            return { provider: manifest.name, models: await module.listModels() };
+          } catch (err) {
+            return { provider: manifest.name, models: [], error: err.message };
+          }
+        }))
+        .then(providers => sendJson(res, 200, {
+          providers,
+          models: providers.flatMap(provider => provider.models)
+        }))
+        .catch(err => sendJson(res, 500, { error: err.message }));
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/chats') {
       if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
       try {

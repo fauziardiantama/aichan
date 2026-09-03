@@ -31,6 +31,10 @@ aichan/
 │   ├── index.js                     # Provider Google Gemini
 │   ├── config.json                  # API key provider
 │   └── package.json                 # Dependency @google/genai
+├── chatgpt/
+│   ├── index.js                     # Provider OpenAI ChatGPT
+│   ├── config.json                  # API key provider
+│   └── package.json                 # Dependency openai
 ├── main/
 │   ├── index.js                     # Modul utama dan lifecycle aplikasi
 │   └── package.json                 # Manifest modul utama
@@ -54,6 +58,8 @@ aichan/
 
 ### Fase 2: Provider AI & Konfigurasi
 - [x] Implementasikan adapter Google Gemini menggunakan `@google/genai` di modul `aistudio`.
+- [x] Implementasikan adapter OpenAI ChatGPT menggunakan `openai` di modul `chatgpt`.
+- [x] Ambil daftar model secara dinamis dari API provider; frontend tidak menyimpan daftar model hardcoded.
 - [x] Sediakan konfigurasi provider melalui `aistudio/config.json` dan dukungan model pada `generate()`.
 - [ ] Tambahkan validasi konfigurasi, timeout, penanganan error, dan retry yang terkontrol pada request AI.
 - [ ] Tambahkan abstraction provider yang memungkinkan provider AI lain mengikuti kontrak `generate()` yang sama.
@@ -86,9 +92,10 @@ aichan/
 - [x] Inisialisasi Git repository dan remote GitHub pada branch `main`.
 - [x] Susun dokumen perencanaan proyek (`PLAN.md`).
 - [x] Tetapkan tech stack saat ini: Node.js, ES modules, native HTTP server, dan Google Gemini SDK.
-- [x] Siapkan struktur modul aktif: `admin_web/`, `main/`, `aistudio/`, dan `telegram/`.
+- [x] Siapkan struktur modul aktif: `admin_web/`, `main/`, `aistudio/`, `chatgpt/`, dan `telegram/`.
 - [x] Implementasikan dashboard admin, konfigurasi module, dan AI playground dasar.
 - [x] Tentukan arah database awal: SQLite dikelola oleh modul `main`.
+- [x] Sediakan discovery model provider melalui API admin dengan metadata capability yang dinormalisasi.
 - [ ] Finalisasi desain chat storage, system prompt catalog, lokasi data, backup, retensi log, dan batas akses antarmodul.
 - [ ] Rancang system prompt dengan `codename` unik, isi prompt, status aktif, dan metadata perubahan.
 - [ ] Implementasikan database tables untuk chat, message logs, dan system prompts serta storage API pada fase berikutnya.
