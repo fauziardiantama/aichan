@@ -31,6 +31,9 @@ aichan/
 │   ├── index.js                     # Provider Google Gemini
 │   ├── config.json                  # API key provider
 │   └── package.json                 # Dependency @google/genai
+├── main/
+│   ├── index.js                     # Modul utama dan lifecycle aplikasi
+│   └── package.json                 # Manifest modul utama
 ├── telegram/
 │   ├── index.js                     # Adapter Telegram dan lifecycle modul
 │   ├── config.json                  # API key dan owner ID Telegram
@@ -45,7 +48,7 @@ aichan/
 
 ### Fase 1: Fondasi Runtime & Kontrak Modul
 - [x] Tetapkan Node.js dengan ES modules sebagai runtime dan format kode utama.
-- [x] Buat entry point root yang menginisialisasi `aistudio` dan `admin_web` serta mendaftarkan modul terkait.
+- [x] Buat entry point root yang menginisialisasi `main` dan `aistudio`, lalu mendaftarkan modul terkait ke `admin_web`.
 - [x] Tetapkan kontrak modul melalui `manifest`, `start()`, `stop()`, dan `status()`.
 - [ ] Tambahkan scripts root untuk menjalankan aplikasi, pemeriksaan sintaks, dan pengujian.
 
@@ -56,13 +59,18 @@ aichan/
 - [ ] Tambahkan abstraction provider yang memungkinkan provider AI lain mengikuti kontrak `generate()` yang sama.
 - [ ] Tambahkan manajemen riwayat percakapan dan batas konteks agar penggunaan token tetap terkendali.
 
-### Fase 3: Admin Web, Adapter, & Eksekusi
+### Fase 3: Admin Web, Adapter, Eksekusi, & Database
 - [x] Implementasikan admin web berbasis Node.js `http` tanpa framework tambahan.
 - [x] Sediakan API untuk daftar modul, baca/simpan konfigurasi, dan pengujian prompt melalui `/api/generate`.
 - [x] Sediakan UI dashboard dan AI chat playground untuk menguji modul `aistudio`.
 - [ ] Hubungkan modul `telegram` ke Telegram Bot API dan teruskan pesan ke provider AI.
 - [ ] Tambahkan validasi payload request dan response pada API admin serta adapter platform.
 - [ ] Rancang registry tool yang dapat mendaftarkan dan menjalankan fungsi dengan schema input/output yang tervalidasi.
+- [ ] Tetapkan SQLite sebagai storage awal dan `main` sebagai pemilik lifecycle serta akses database.
+- [ ] Tambahkan dependency database di `main/` dan tentukan lokasi data, backup, serta kebijakan retensi.
+- [ ] Rancang kontrak storage berbasis fungsi/repository untuk daftar `chat_id`, log pesan human/AI, dan system prompt berkode unik agar `telegram`, `aistudio`, dan `admin_web` tidak mengakses SQL secara langsung.
+- [ ] Implementasikan koneksi database dan migration/schema setelah desain storage disetujui.
+- [ ] Tambahkan endpoint admin dan UI untuk daftar chat, detail log pesan, prompt berdasarkan codename, pencarian, pagination, dan penghapusan setelah storage API dan kontrol akses tersedia.
 
 ### Fase 4: Operasional & Polishing
 - [ ] Tambahkan endpoint atau tampilan health check untuk status root, provider, admin web, dan adapter Telegram.
@@ -78,8 +86,13 @@ aichan/
 - [x] Inisialisasi Git repository dan remote GitHub pada branch `main`.
 - [x] Susun dokumen perencanaan proyek (`PLAN.md`).
 - [x] Tetapkan tech stack saat ini: Node.js, ES modules, native HTTP server, dan Google Gemini SDK.
-- [x] Siapkan struktur modul aktif: `admin_web/`, `aistudio/`, dan `telegram/`.
+- [x] Siapkan struktur modul aktif: `admin_web/`, `main/`, `aistudio/`, dan `telegram/`.
 - [x] Implementasikan dashboard admin, konfigurasi module, dan AI playground dasar.
+- [x] Tentukan arah database awal: SQLite dikelola oleh modul `main`.
+- [ ] Finalisasi desain chat storage, system prompt catalog, lokasi data, backup, retensi log, dan batas akses antarmodul.
+- [ ] Rancang system prompt dengan `codename` unik, isi prompt, status aktif, dan metadata perubahan.
+- [ ] Implementasikan database tables untuk chat, message logs, dan system prompts serta storage API pada fase berikutnya.
+- [ ] Implementasikan endpoint serta UI untuk chat ID list, message logs, dan pengelolaan system prompt setelah storage API siap.
 - [ ] Tambahkan root scripts untuk menjalankan dan memvalidasi aplikasi.
 - [ ] Selesaikan integrasi Telegram dan validasi konfigurasi.
 - [ ] Tambahkan pengujian dasar serta logging dan health check.

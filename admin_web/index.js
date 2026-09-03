@@ -11,10 +11,35 @@ const HTML_FILE = path.join(__dirname, 'interface', 'index.html');
 
 let server = null;
 let registeredModules = [];
+let storage = null;
+
+function sendJson(res, statusCode, payload) {
+  res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(payload));
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 1024 * 1024) reject(new Error('Request body is too large.'));
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body || '{}'));
+      } catch {
+        reject(new Error('Invalid JSON payload.'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
 export function start(options = {}) {
   const port = typeof options === 'number' ? options : (options.port || PORT);
   registeredModules = (options && options.modules) || [];
+  storage = options.storage || null;
 
   if (server) {
     console.log(`[admin_web] Server already running on port ${port}`);
@@ -33,6 +58,57 @@ export function start(options = {}) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(manifests));
       return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/chats') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      try {
+        const result = storage.listChats({
+          search: reqUrl.searchParams.get('search') || '',
+          limit: reqUrl.searchParams.get('limit'),
+          offset: reqUrl.searchParams.get('offset')
+        });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    const messagesMatch = pathname.match(/^\/api\/chats\/(\d+)\/messages$/);
+    if (req.method === 'GET' && messagesMatch) {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      try {
+        const chat = storage.getChat(Number(messagesMatch[1]));
+        if (!chat) return sendJson(res, 404, { error: 'Chat not found.' });
+        return sendJson(res, 200, { chat, messages: storage.getChatMessages(chat.id) });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    const chatMatch = pathname.match(/^\/api\/chats\/(\d+)$/);
+    if (req.method === 'DELETE' && chatMatch) {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      return sendJson(res, storage.deleteChat(Number(chatMatch[1])) ? 200 : 404, { success: true });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/prompts') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      return sendJson(res, 200, { prompts: storage.listSystemPrompts() });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/prompts') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      readBody(req)
+        .then(payload => sendJson(res, 200, { prompt: storage.saveSystemPrompt(payload) }))
+        .catch(err => sendJson(res, 400, { error: err.message }));
+      return;
+    }
+
+    const promptMatch = pathname.match(/^\/api\/prompts\/(\d+)$/);
+    if (req.method === 'DELETE' && promptMatch) {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      return sendJson(res, storage.deleteSystemPrompt(Number(promptMatch[1])) ? 200 : 404, { success: true });
     }
 
     // API: Get module config
@@ -116,11 +192,8 @@ export function start(options = {}) {
 
     // API: Generate AI response via module
     if (req.method === 'POST' && pathname === '/api/generate') {
-      let body = '';
-      req.on('data', chunk => { body += chunk; });
-      req.on('end', async () => {
+      readBody(req).then(async ({ module: moduleName, prompt, model, chatId, platform = 'web', promptCodename }) => {
         try {
-          const { module: moduleName, prompt, model } = JSON.parse(body || '{}');
           const targetMod = registeredModules.find(m => {
             const man = m.manifest || (m.default && m.default.manifest);
             return man && man.name === moduleName;
@@ -130,14 +203,22 @@ export function start(options = {}) {
             res.end(JSON.stringify({ error: `Module '${moduleName}' or generate() not found` }));
             return;
           }
-          const result = await targetMod.generate({ prompt, model });
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(result));
+          let chat = null;
+          let selectedPrompt = null;
+          if (storage) {
+            chat = storage.upsertChat({ chatId: chatId || 'admin-playground', platform, promptCodename });
+            storage.addMessage({ chatKey: chat.id, role: 'user', content: prompt });
+            selectedPrompt = promptCodename ? storage.getSystemPrompt(promptCodename) : (chat.prompt_codename ? storage.getSystemPrompt(chat.prompt_codename) : null);
+          }
+          const result = await targetMod.generate({ prompt, model, systemPrompt: selectedPrompt?.content });
+          if (storage && chat) {
+            storage.addMessage({ chatKey: chat.id, role: 'assistant', content: result.text, model: result.model || model || null, promptCodename: selectedPrompt?.codename || null });
+          }
+          sendJson(res, 200, { ...result, chatId: chat?.chat_id || null });
         } catch (err) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err.message }));
+          sendJson(res, 500, { error: err.message });
         }
-      });
+      }).catch(err => sendJson(res, 400, { error: err.message }));
       return;
     }
 

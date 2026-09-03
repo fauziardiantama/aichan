@@ -6,7 +6,7 @@ document.querySelectorAll('nav a').forEach(link => {
     document.querySelectorAll('nav a').forEach(el => el.classList.remove('active'));
     link.classList.add('active');
 
-    if (tabName === 'overview' || tabName === 'testing') {
+    if (['overview', 'testing', 'chats', 'prompts'].includes(tabName)) {
       document.querySelectorAll('.view-tab').forEach(view => {
         view.style.display = 'none';
       });
@@ -18,14 +18,17 @@ document.querySelectorAll('nav a').forEach(link => {
 
       const pageTitle = document.getElementById('pageTitle');
       if (pageTitle) {
-        pageTitle.textContent = tabName === 'testing' ? 'AI Chat Playground // Testing' : 'System Dashboard';
+        pageTitle.textContent = tabName === 'testing' ? 'AI Chat Playground // Testing' : tabName === 'chats' ? 'Chat Logs' : tabName === 'prompts' ? 'System Prompts' : 'System Dashboard';
       }
+      if (tabName === 'chats') loadChats();
+      if (tabName === 'prompts') loadPrompts();
     }
   });
 });
 
 let currentConfigModule = null;
 let moduleManifests = [];
+let activePromptId = null;
 
 async function loadManifests() {
   try {
@@ -139,6 +142,7 @@ async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const chatArea = document.getElementById('chatMessagesArea');
   const modelSelect = document.getElementById('modelSelect');
+  const promptSelect = document.getElementById('promptSelect');
   const btnSend = document.getElementById('btnSendChat');
   const chatStatus = document.getElementById('chatStatus');
 
@@ -179,7 +183,8 @@ async function sendChatMessage() {
       body: JSON.stringify({
         module: 'aistudio',
         prompt,
-        model
+        model,
+        promptCodename: promptSelect ? promptSelect.value : undefined
       })
     });
 
@@ -209,10 +214,90 @@ async function sendChatMessage() {
   }
 }
 
+async function loadChats() {
+  const list = document.getElementById('chatList');
+  if (!list) return;
+  const search = document.getElementById('chatSearch')?.value || '';
+  const res = await fetch(`/api/chats?search=${encodeURIComponent(search)}`);
+  const data = await res.json();
+  list.innerHTML = (data.chats || []).map(chat => `
+    <tr><td><code>${escapeHtml(chat.chat_id)}</code></td><td>${escapeHtml(chat.platform)}</td>
+    <td>${chat.message_count}</td><td>${escapeHtml(chat.prompt_codename || '-')}</td>
+    <td>${escapeHtml(chat.updated_at)}</td><td><button class="btn" onclick="viewChat(${chat.id})">View</button>
+    <button class="btn" onclick="removeChat(${chat.id})">Delete</button></td></tr>
+  `).join('') || '<tr><td colspan="6">No chats found.</td></tr>';
+}
+
+async function viewChat(id) {
+  const res = await fetch(`/api/chats/${id}/messages`);
+  const data = await res.json();
+  document.getElementById('chatLogTitle').textContent = `${data.chat.platform} // ${data.chat.chat_id}`;
+  document.getElementById('chatLog').innerHTML = (data.messages || []).map(message =>
+    `<div class="terminal-line"><span class="terminal-time">[${escapeHtml(message.created_at)}]</span><strong>${escapeHtml(message.role)}</strong>: ${escapeHtml(message.content)}</div>`
+  ).join('') || '<div class="terminal-line">No messages.</div>';
+}
+
+async function removeChat(id) {
+  if (!confirm('Delete this chat and its message log?')) return;
+  await fetch(`/api/chats/${id}`, { method: 'DELETE' });
+  loadChats();
+}
+
+async function loadPrompts() {
+  const list = document.getElementById('promptList');
+  if (!list) return;
+  const res = await fetch('/api/prompts');
+  const data = await res.json();
+  list.innerHTML = (data.prompts || []).map(prompt => `
+    <div class="terminal-line"><strong>${escapeHtml(prompt.codename)}</strong> ${prompt.is_active ? 'ACTIVE' : 'INACTIVE'}
+      <button class="btn" onclick="editPrompt(${prompt.id})">Edit</button></div>
+  `).join('');
+  window.promptRecords = data.prompts || [];
+  const promptSelect = document.getElementById('promptSelect');
+  if (promptSelect) {
+    promptSelect.innerHTML = (data.prompts || []).filter(prompt => prompt.is_active).map(prompt =>
+      `<option value="${escapeHtml(prompt.codename)}">${escapeHtml(prompt.codename)}</option>`
+    ).join('');
+  }
+}
+
+function editPrompt(id) {
+  const prompt = (window.promptRecords || []).find(item => item.id === id);
+  if (!prompt) return;
+  activePromptId = prompt.id;
+  document.getElementById('promptCodename').value = prompt.codename;
+  document.getElementById('promptDescription').value = prompt.description || '';
+  document.getElementById('promptContent').value = prompt.content;
+  document.getElementById('promptActive').checked = Boolean(prompt.is_active);
+}
+
+async function savePrompt() {
+  const status = document.getElementById('promptStatus');
+  try {
+    const res = await fetch('/api/prompts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      id: activePromptId,
+      codename: document.getElementById('promptCodename').value.trim(),
+      description: document.getElementById('promptDescription').value.trim(),
+      content: document.getElementById('promptContent').value,
+      isActive: document.getElementById('promptActive').checked
+    }) });
+    const data = await res.json();
+    status.textContent = res.ok ? 'Saved.' : data.error;
+    if (res.ok) loadPrompts();
+  } catch (err) {
+    status.textContent = err.message;
+  }
+}
+
+window.viewChat = viewChat;
+window.removeChat = removeChat;
+window.editPrompt = editPrompt;
+
 function initChatListeners() {
   const btnSend = document.getElementById('btnSendChat');
   const chatInput = document.getElementById('chatInput');
   const btnClear = document.getElementById('btnClearChat');
+  const savePromptButton = document.getElementById('savePrompt');
 
   if (btnSend) {
     btnSend.addEventListener('click', sendChatMessage);
@@ -238,6 +323,7 @@ function initChatListeners() {
       }
     });
   }
+  if (savePromptButton) savePromptButton.addEventListener('click', savePrompt);
 }
 
 if (document.readyState === 'loading') {
@@ -247,3 +333,5 @@ if (document.readyState === 'loading') {
 }
 
 loadManifests();
+loadPrompts();
+document.getElementById('chatSearch')?.addEventListener('input', loadChats);

@@ -17,6 +17,8 @@
     <nav>
       <a href="#overview" class="active" data-tab="overview">Overview</a>
       <a href="#testing" data-tab="testing">Testing</a>
+      <a href="#chats" data-tab="chats">Chat Logs</a>
+      <a href="#prompts" data-tab="prompts">System Prompts</a>
       <a href="#modules" data-tab="modules">Modules & Adapters</a>
       <a href="#console" data-tab="console">System Console</a>
       <a href="#config" data-tab="config">Configuration</a>
@@ -155,6 +157,11 @@
           </select>
         </div>
 
+        <div class="option-item">
+          <label class="option-label">System Prompt</label>
+          <select class="select-input" id="promptSelect"></select>
+        </div>
+
         <div class="option-item" style="margin-left: auto;">
           <button class="btn" id="btnClearChat" style="font-size: 0.7rem; padding: 0.35rem 0.75rem;">Clear Chat</button>
         </div>
@@ -184,6 +191,39 @@
         <div class="chat-subcaption" id="chatStatus">
           [Live] Messages dispatched to aistudio via POST /api/generate
         </div>
+      </div>
+    </div>
+
+    <div id="view-chats" class="view-tab content" style="display: none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Chat IDs</div>
+          <input class="form-input" id="chatSearch" placeholder="Search chat ID or platform...">
+        </div>
+        <table>
+          <thead><tr><th>Chat ID</th><th>Platform</th><th>Messages</th><th>Prompt</th><th>Updated</th><th>Control</th></tr></thead>
+          <tbody id="chatList"></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title" id="chatLogTitle">Select a chat</div></div>
+        <div class="terminal-box" id="chatLog"></div>
+      </div>
+    </div>
+
+    <div id="view-prompts" class="view-tab content" style="display: none;">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">System Prompt Catalog</div></div>
+        <div id="promptList"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">Edit Prompt</div></div>
+        <div class="form-group"><label class="form-label">Codename</label><input class="form-input" id="promptCodename" placeholder="default_assistant"></div>
+        <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="promptDescription"></div>
+        <div class="form-group"><label class="form-label">Content</label><textarea class="form-input" id="promptContent" rows="8"></textarea></div>
+        <label class="form-label"><input type="checkbox" id="promptActive" checked> Active</label>
+        <button class="btn btn-save" id="savePrompt">Save Prompt</button>
+        <span id="promptStatus" class="modal-msg"></span>
       </div>
     </div>
   </main>

@@ -40,7 +40,7 @@ export function status() {
   return { name: 'aistudio', state: client ? 'running' : 'idle' };
 }
 
-export async function generate({ prompt, model = DEFAULT_MODEL }) {
+export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = null }) {
   if (!client) {
     const { apiKey } = loadConfig();
     if (!apiKey) throw new Error('aistudio: No API key configured.');
@@ -48,9 +48,10 @@ export async function generate({ prompt, model = DEFAULT_MODEL }) {
   }
   const response = await client.models.generateContent({
     model,
-    contents: prompt
+    contents: prompt,
+    config: systemPrompt ? { systemInstruction: systemPrompt } : undefined
   });
-  return { text: response.text };
+  return { text: response.text, model };
 }
 
 export default {
