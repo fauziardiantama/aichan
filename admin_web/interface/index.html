@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ai-Chan // Admin Panel</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="brand">
+      Ai-Chan
+      <span>Master Control</span>
+    </div>
+    <nav>
+      <a href="#overview" class="active" data-tab="overview">Overview</a>
+      <a href="#testing" data-tab="testing">Testing</a>
+      <a href="#modules" data-tab="modules">Modules & Adapters</a>
+      <a href="#console" data-tab="console">System Console</a>
+      <a href="#config" data-tab="config">Configuration</a>
+    </nav>
+    <div class="sidebar-footer">
+      Node v20 // Port :3000
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <main>
+    <header>
+      <h2 id="pageTitle">System Dashboard</h2>
+      <div class="badge-status">System // Online</div>
+    </header>
+
+    <!-- Overview Tab View -->
+    <div id="view-overview" class="view-tab content active">
+      <!-- Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-title">System Status</div>
+          <div class="metric-val">Active</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Loaded Modules</div>
+          <div class="metric-val">1 / 3</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Local Listener</div>
+          <div class="metric-val">Port 3000</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Architecture</div>
+          <div class="metric-val">Single Node</div>
+        </div>
+      </div>
+
+      <!-- Modules Control Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Child Modules</div>
+          <button class="btn" onclick="location.reload()">Refresh State</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Module Name</th>
+              <th>Category</th>
+              <th>Binding</th>
+              <th>Status</th>
+              <th>Control</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>admin_web</strong></td>
+              <td>Interface</td>
+              <td><a href="http://localhost:3000" target="_blank" class="code-link">http://localhost:3000 &nearr;</a></td>
+              <td><span class="tag tag-online">ONLINE</span></td>
+              <td><button class="btn" disabled>Active</button></td>
+            </tr>
+            <tr>
+              <td><strong>telegram</strong></td>
+              <td>Adapter</td>
+              <td><code>children/telegram</code></td>
+              <td><span class="tag tag-offline">UNLOADED</span></td>
+              <td>
+                <button class="btn">Deploy</button>
+                <button class="btn" onclick="openConfigModal('telegram')">Config</button>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>providers</strong></td>
+              <td>AI Engine</td>
+              <td><code>children/providers</code></td>
+              <td><span class="tag tag-offline">STANDBY</span></td>
+              <td><button class="btn">Deploy</button></td>
+            </tr>
+            <tr>
+              <td><strong>aistudio</strong></td>
+              <td>AI Provider</td>
+              <td><code>aistudio/</code></td>
+              <td><span class="tag tag-offline">IDLE</span></td>
+              <td>
+                <button class="btn" onclick="openConfigModal('aistudio')">Config</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- System Log Feed -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">System Logs</div>
+          <span style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted);">stdout</span>
+        </div>
+        <div class="terminal-box">
+          <div class="terminal-line"><span class="terminal-time">[22:35:50]</span>[Ai-Chan] Starting main process...</div>
+          <div class="terminal-line"><span class="terminal-time">[22:35:51]</span>[admin_web] Admin web UI running at http://localhost:3000</div>
+          <div class="terminal-line"><span class="terminal-time">[22:39:20]</span>[admin_web] Interface served from admin_web/interface/index.html</div>
+          <div class="terminal-line"><span class="terminal-time">[22:44:20]</span>[core] System initialized in Single Node architecture.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Testing Tab View (AI Chat Playground) -->
+    <div id="view-testing" class="view-tab chat-view-container" style="display: none;">
+      <!-- Options Toolbar -->
+      <div class="chat-options-bar">
+        <div class="option-item">
+          <label class="option-label">AI Model</label>
+          <select class="select-input" id="modelSelect">
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Default)</option>
+            <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+          </select>
+        </div>
+
+        <div class="option-item">
+          <label class="option-label">Temperature</label>
+          <select class="select-input">
+            <option>0.7 (Balanced)</option>
+            <option>0.2 (Precise / Code)</option>
+            <option>1.0 (Creative)</option>
+          </select>
+        </div>
+
+        <div class="option-item">
+          <label class="option-label">Persona Mode</label>
+          <select class="select-input">
+            <option>Standard Assistant</option>
+            <option>Minimalist Noir</option>
+            <option>Technical Dispatcher</option>
+          </select>
+        </div>
+
+        <div class="option-item" style="margin-left: auto;">
+          <button class="btn" id="btnClearChat" style="font-size: 0.7rem; padding: 0.35rem 0.75rem;">Clear Chat</button>
+        </div>
+      </div>
+
+      <!-- Chat Messages Scroll Area -->
+      <div class="chat-messages-area" id="chatMessagesArea">
+        <div class="chat-sys-notice">
+          <span>// Session established with aistudio provider module //</span>
+        </div>
+
+        <!-- Initial AI Greeting -->
+        <div class="chat-message ai">
+          <div class="chat-author">Ai-Chan // Core</div>
+          <div class="chat-bubble">
+            Greetings. I am Ai-Chan. The local node is online and listening on port 3000. How can I assist you with testing today?
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Bar -->
+      <div class="chat-input-container">
+        <div class="chat-input-box">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Type a message to Ai-Chan..." autocomplete="off">
+          <button id="btnSendChat" class="btn btn-save" style="padding: 0 1.25rem;">Send ↵</button>
+        </div>
+        <div class="chat-subcaption" id="chatStatus">
+          [Live] Messages dispatched to aistudio via POST /api/generate
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Configuration Modal -->
+  <div id="configModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modalTitle">Configure Module</h3>
+        <button class="btn-close" onclick="closeConfigModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <span id="modalMsg" class="modal-msg"></span>
+        <button class="btn" onclick="closeConfigModal()">Cancel</button>
+        <button class="btn btn-save" onclick="saveActiveConfig()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+</body>
+</html>
