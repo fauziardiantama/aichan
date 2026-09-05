@@ -45,7 +45,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-title">Loaded Modules</div>
-          <div class="metric-val">1 / 3</div>
+          <div class="metric-val" id="moduleMetric">Loading</div>
         </div>
         <div class="metric-card">
           <div class="metric-title">Local Listener</div>
@@ -73,41 +73,7 @@
               <th>Control</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td><strong>admin_web</strong></td>
-              <td>Interface</td>
-              <td><a href="http://localhost:3000" target="_blank" class="code-link">http://localhost:3000 &nearr;</a></td>
-              <td><span class="tag tag-online">ONLINE</span></td>
-              <td><button class="btn" disabled>Active</button></td>
-            </tr>
-            <tr>
-              <td><strong>telegram</strong></td>
-              <td>Adapter</td>
-              <td><code>children/telegram</code></td>
-              <td><span class="tag tag-offline">UNLOADED</span></td>
-              <td>
-                <button class="btn">Deploy</button>
-                <button class="btn" onclick="openConfigModal('telegram')">Config</button>
-              </td>
-            </tr>
-            <tr>
-              <td><strong>providers</strong></td>
-              <td>AI Engine</td>
-              <td><code>children/providers</code></td>
-              <td><span class="tag tag-offline">STANDBY</span></td>
-              <td><button class="btn">Deploy</button></td>
-            </tr>
-            <tr>
-              <td><strong>aistudio</strong></td>
-              <td>AI Provider</td>
-              <td><code>aistudio/</code></td>
-              <td><span class="tag tag-offline">IDLE</span></td>
-              <td>
-                <button class="btn" onclick="openConfigModal('aistudio')">Config</button>
-              </td>
-            </tr>
-          </tbody>
+          <tbody id="moduleList"></tbody>
         </table>
       </div>
 
@@ -140,26 +106,12 @@
         </div>
 
         <div class="option-item">
-          <label class="option-label">Temperature</label>
-          <select class="select-input">
-            <option>0.7 (Balanced)</option>
-            <option>0.2 (Precise / Code)</option>
-            <option>1.0 (Creative)</option>
-          </select>
-        </div>
-
-        <div class="option-item">
-          <label class="option-label">Persona Mode</label>
-          <select class="select-input">
-            <option>Standard Assistant</option>
-            <option>Minimalist Noir</option>
-            <option>Technical Dispatcher</option>
-          </select>
-        </div>
-
-        <div class="option-item">
           <label class="option-label">System Prompt</label>
           <select class="select-input" id="promptSelect"></select>
+        </div>
+
+        <div class="model-details" id="modelDetails" aria-live="polite">
+          Select a model to view its server metadata.
         </div>
 
         <div class="option-item" style="margin-left: auto;">
@@ -244,6 +196,8 @@
     </div>
   </div>
 
+  <script src="/marked.js"></script>
+  <script src="/purify.js"></script>
   <script src="/script.js"></script>
 </body>
 </html>

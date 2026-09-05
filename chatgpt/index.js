@@ -1,27 +1,24 @@
 import OpenAI from 'openai';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const configPath = path.join(moduleDir, 'config.json');
 const defaultModel = 'gpt-4o-mini';
 
 export const manifest = {
   name: 'chatgpt',
+  type: 'ai-provider',
   configFile: 'config.json',
   fields: ['apiKey']
 };
 
-function loadConfig() {
-  if (!fs.existsSync(configPath)) return { apiKey: '' };
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+let client = null;
+let config = { apiKey: '' };
+
+export function configure(nextConfig = {}) {
+  config = { apiKey: '', ...nextConfig };
+  client = null;
 }
 
-let client = null;
-
-export function start() {
-  const { apiKey } = loadConfig();
+export function start(options = {}) {
+  configure(options.config || {});
+  const { apiKey } = config;
   if (!apiKey) {
     console.warn('[chatgpt] No API key configured. Module is idle.');
     return;
@@ -41,7 +38,7 @@ export function status() {
 
 async function getClient() {
   if (client) return client;
-  const { apiKey } = loadConfig();
+  const { apiKey } = config;
   if (!apiKey) throw new Error('chatgpt: No API key configured.');
   client = new OpenAI({ apiKey });
   return client;
@@ -54,22 +51,20 @@ export async function listModels() {
     models.push({
       id: model.id,
       name: model.id,
-      provider: 'chatgpt',
-      capabilities: {
-        chat: null,
-        tools: null,
-        vision: null
-      }
+      provider: 'chatgpt'
     });
   }
   return models.sort((left, right) => left.id.localeCompare(right.id));
 }
 
-export async function generate({ prompt, model = defaultModel, systemPrompt = null }) {
+export async function generate({ prompt, model = defaultModel, systemPrompt = null, history = [] }) {
   const availableClient = await getClient();
 
   const messages = [];
   if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+  messages.push(...history
+    .filter(message => ['user', 'assistant'].includes(message.role) && message.content)
+    .map(message => ({ role: message.role, content: message.content })));
   messages.push({ role: 'user', content: prompt });
 
   const response = await availableClient.chat.completions.create({
@@ -88,6 +83,7 @@ export default {
   start,
   stop,
   status,
+  configure,
   listModels,
   generate
 };

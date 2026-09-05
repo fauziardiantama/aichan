@@ -36,10 +36,33 @@ async function loadManifests() {
     const res = await fetch('/api/modules');
     if (res.ok) {
       moduleManifests = await res.json();
+      renderModuleOverview();
     }
   } catch (err) {
     console.error('Failed to load manifests:', err);
   }
+}
+
+function renderModuleOverview() {
+  const list = document.getElementById('moduleList');
+  const metric = document.getElementById('moduleMetric');
+  if (!list) return;
+
+  const modules = [{ name: 'admin_web', type: 'interface', status: { state: 'running' }, local: true }, ...moduleManifests];
+  const runningCount = modules.filter(module => ['running', 'online'].includes(module.status?.state)).length;
+  if (metric) metric.textContent = `${runningCount} / ${modules.length}`;
+  list.innerHTML = modules.map(module => {
+    const status = module.status?.state || 'unknown';
+    const statusClass = ['running', 'online'].includes(status) ? 'tag-online' : 'tag-offline';
+    const binding = module.local ? 'http://localhost:3000' : `${module.name}/`;
+    const bindingMarkup = module.local
+      ? `<a href="${binding}" target="_blank" class="code-link">${binding} &nearr;</a>`
+      : `<code>${escapeHtml(binding)}</code>`;
+    const configButton = module.fields?.length
+      ? `<button class="btn" onclick="openConfigModal('${escapeHtml(module.name)}')">Config</button>`
+      : '';
+    return `<tr><td><strong>${escapeHtml(module.name)}</strong></td><td>${escapeHtml(module.type || 'module')}</td><td>${bindingMarkup}</td><td><span class="tag ${statusClass}">${escapeHtml(status.toUpperCase())}</span></td><td>${configButton}</td></tr>`;
+  }).join('');
 }
 
 async function openConfigModal(moduleName) {
@@ -58,7 +81,11 @@ async function openConfigModal(moduleName) {
     await loadManifests();
   }
 
-  const manifest = moduleManifests.find(m => m.name === moduleName) || { fields: ['apiKey', 'ownerId'] };
+  const manifest = moduleManifests.find(m => m.name === moduleName);
+  if (!manifest) {
+    body.innerHTML = '<div class="modal-msg">Module configuration is unavailable.</div>';
+    return;
+  }
 
   try {
     const res = await fetch(`/api/config?module=${encodeURIComponent(moduleName)}`);
@@ -69,9 +96,10 @@ async function openConfigModal(moduleName) {
       const val = config[field] !== undefined ? config[field] : '';
       const group = document.createElement('div');
       group.className = 'form-group';
+      const inputType = field.toLowerCase().includes('key') ? 'password' : 'text';
       group.innerHTML = `
         <label class="form-label">${escapeHtml(field)}</label>
-        <input type="text" class="form-input" data-field="${escapeHtml(field)}" value="${escapeHtml(val)}" placeholder="Enter ${escapeHtml(field)}...">
+        <input type="${inputType}" class="form-input" data-field="${escapeHtml(field)}" value="${escapeHtml(val)}" placeholder="Enter ${escapeHtml(field)}...">
       `;
       body.appendChild(group);
     });
@@ -201,7 +229,8 @@ async function sendChatMessage() {
     if (res.ok && data.text) {
       bubble.style.color = '';
       bubble.style.fontStyle = '';
-      bubble.textContent = data.text;
+      bubble.classList.add('markdown-content');
+      bubble.innerHTML = DOMPurify.sanitize(marked.parse(data.text));
       if (chatStatus) chatStatus.textContent = '[Ready] Response received successfully.';
     } else {
       bubble.style.color = '#f87171';
@@ -227,6 +256,28 @@ function updateProviderModels() {
   if (!providerSelect || !modelSelect) return;
   const models = availableModels.filter(model => model.provider === providerSelect.value);
   modelSelect.innerHTML = models.map(model => `<option value="${escapeHtml(model.id)}">${escapeHtml(model.name)}</option>`).join('');
+  renderModelDetails();
+}
+
+function renderModelDetails() {
+  const providerSelect = document.getElementById('providerSelect');
+  const modelSelect = document.getElementById('modelSelect');
+  const details = document.getElementById('modelDetails');
+  if (!providerSelect || !modelSelect || !details) return;
+  const model = availableModels.find(item => item.provider === providerSelect.value && item.id === modelSelect.value);
+  if (!model) {
+    details.textContent = 'No model metadata available.';
+    return;
+  }
+  const metadata = model.metadata || {};
+  details.innerHTML = Object.entries(metadata).map(([key, value]) => `
+    <div class="model-detail-row"><span>${escapeHtml(key)}</span><code>${escapeHtml(formatModelValue(value))}</code></div>
+  `).join('') || 'No metadata returned by provider.';
+}
+
+function formatModelValue(value) {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
 async function loadModels() {
@@ -363,6 +414,8 @@ function initChatListeners() {
   }
   if (savePromptButton) savePromptButton.addEventListener('click', savePrompt);
   if (providerSelect) providerSelect.addEventListener('change', updateProviderModels);
+  const modelSelect = document.getElementById('modelSelect');
+  if (modelSelect) modelSelect.addEventListener('change', renderModelDetails);
   updateProviderModels();
 }
 

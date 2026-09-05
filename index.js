@@ -7,20 +7,16 @@ import * as chatgpt from './chatgpt/index.js';
 console.log('[Ai-Chan] Starting system...');
 
 main.start();
-aistudio.start();
-chatgpt.start();
+aistudio.start({ config: main.getModuleConfig('aistudio') });
+chatgpt.start({ config: main.getModuleConfig('chatgpt') });
 
 telegram.start({
   provider: aistudio,
-  storage: main
+  storage: main,
+  config: main.getModuleConfig('telegram')
 });
 
 adminWeb.start({
   modules: [main, telegram, aistudio, chatgpt],
   storage: main
 });
-
-// THIS IS NOTE FOR SOMEDAY, DO NOT DELETE
-// telegram.start({
-//   provider: aistudio
-// });

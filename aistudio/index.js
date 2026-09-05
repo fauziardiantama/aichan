@@ -1,28 +1,25 @@
 import { GoogleGenAI } from '@google/genai';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = path.join(__dirname, 'config.json');
 
 const DEFAULT_MODEL = 'gemini-3.5-flash';
 
 export const manifest = {
   name: 'aistudio',
+  type: 'ai-provider',
   configFile: 'config.json',
   fields: ['apiKey']
 };
 
-function loadConfig() {
-  if (!fs.existsSync(CONFIG_PATH)) return { apiKey: '' };
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+let client = null;
+let config = { apiKey: '' };
+
+export function configure(nextConfig = {}) {
+  config = { apiKey: '', ...nextConfig };
+  client = null;
 }
 
-let client = null;
-
-export function start() {
-  const { apiKey } = loadConfig();
+export function start(options = {}) {
+  configure(options.config || {});
+  const { apiKey } = config;
   if (!apiKey) {
     console.warn('[aistudio] No API key configured. Module is idle.');
     return;
@@ -42,7 +39,7 @@ export function status() {
 
 async function getClient() {
   if (client) return client;
-  const { apiKey } = loadConfig();
+  const { apiKey } = config;
   if (!apiKey) throw new Error('aistudio: No API key configured.');
   client = new GoogleGenAI({ apiKey });
   return client;
@@ -52,31 +49,29 @@ export async function listModels() {
   const availableClient = await getClient();
   const models = [];
   for await (const model of await availableClient.models.list()) {
-    const methods = model.supportedGenerationMethods || [];
-    if (!methods.includes('generateContent')) continue;
+    const actions = model.supportedActions || [];
+    if (!actions.includes('generateContent')) continue;
     models.push({
       id: model.name.replace(/^models\//, ''),
       name: model.displayName || model.name,
-      provider: 'aistudio',
-      description: model.description || '',
-      limits: {
-        inputTokens: model.inputTokenLimit || null,
-        outputTokens: model.outputTokenLimit || null
-      },
-      capabilities: {
-        chat: true,
-        tools: methods.includes('generateContent')
-      }
+      provider: 'aistudio'
     });
   }
   return models.sort((left, right) => left.id.localeCompare(right.id));
 }
 
-export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = null }) {
+export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = null, history = [] }) {
   const availableClient = await getClient();
+  const contents = history
+    .filter(message => ['user', 'assistant'].includes(message.role) && message.content)
+    .map(message => ({
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: message.content }]
+    }));
+  contents.push({ role: 'user', parts: [{ text: prompt }] });
   const response = await availableClient.models.generateContent({
     model,
-    contents: prompt,
+    contents,
     config: systemPrompt ? { systemInstruction: systemPrompt } : undefined
   });
   return { text: response.text, model };
@@ -87,6 +82,7 @@ export default {
   start,
   stop,
   status,
+  configure,
   listModels,
   generate
 };

@@ -12,6 +12,55 @@ const HTML_FILE = path.join(__dirname, 'interface', 'index.html');
 let server = null;
 let registeredModules = [];
 let storage = null;
+let openRouterModels = null;
+let openRouterModelsLoadedAt = 0;
+
+const OPENROUTER_CACHE_TTL_MS = 5 * 60 * 1000;
+const OPENROUTER_PROVIDER_PREFIXES = {
+  aistudio: 'google',
+  chatgpt: 'openai'
+};
+
+async function getOpenRouterModels() {
+  if (openRouterModels && Date.now() - openRouterModelsLoadedAt < OPENROUTER_CACHE_TTL_MS) {
+    return openRouterModels;
+  }
+
+  const response = await fetch('https://openrouter.ai/api/v1/models');
+  if (!response.ok) throw new Error(`OpenRouter model catalog request failed: ${response.status}`);
+  const payload = await response.json();
+  openRouterModels = {
+    byId: new Map((payload.data || []).map(model => [model.id, model])),
+    byCanonicalSlug: new Map((payload.data || []).map(model => [model.canonical_slug, model]))
+  };
+  openRouterModelsLoadedAt = Date.now();
+  return openRouterModels;
+}
+
+async function addOpenRouterMetadata(provider, models) {
+  const prefix = OPENROUTER_PROVIDER_PREFIXES[provider];
+  if (!prefix) return models;
+
+  const catalog = await getOpenRouterModels();
+  return models.map(model => {
+    const openRouterId = `${prefix}/${model.id}`;
+    const catalogModel = catalog.byId.get(openRouterId)
+      || catalog.byId.get(`~${openRouterId}`)
+      || catalog.byCanonicalSlug.get(openRouterId);
+    if (!catalogModel) return model;
+
+    return {
+      ...model,
+      metadata: {
+        reasoning: catalogModel.reasoning || false,
+        architecture: {
+          input: catalogModel.architecture?.input_modalities || [],
+          output: catalogModel.architecture?.output_modalities || []
+        }
+      }
+    };
+  });
+}
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -48,12 +97,16 @@ export function start(options = {}) {
 
   server = http.createServer((req, res) => {
     const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const pathname = reqUrl.pathname;
+    const pathname = reqUrl.pathname.replace(/\/+$/, '') || '/';
 
     // API: List registered modules and manifests
     if (req.method === 'GET' && pathname === '/api/modules') {
       const manifests = registeredModules
-        .map(m => m.manifest || (m.default && m.default.manifest))
+        .map(m => {
+          const manifest = m.manifest || (m.default && m.default.manifest);
+          const status = typeof m.status === 'function' ? m.status() : null;
+          return manifest ? { ...manifest, status } : null;
+        })
         .filter(Boolean);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(manifests));
@@ -66,7 +119,8 @@ export function start(options = {}) {
         .map(async module => {
           const manifest = module.manifest || (module.default && module.default.manifest) || {};
           try {
-            return { provider: manifest.name, models: await module.listModels() };
+            const models = await module.listModels();
+            return { provider: manifest.name, models: await addOpenRouterMetadata(manifest.name, models) };
           } catch (err) {
             return { provider: manifest.name, models: [], error: err.message };
           }
@@ -145,28 +199,14 @@ export function start(options = {}) {
       }
 
       const man = targetMod.manifest || (targetMod.default && targetMod.default.manifest);
-      const configFile = man.configFile || 'config.json';
-      const configPath = path.resolve(__dirname, '..', moduleName, configFile);
-
-      if (fs.existsSync(configPath)) {
+      if (storage?.getModuleConfig) {
         try {
-          const raw = fs.readFileSync(configPath, 'utf8');
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(raw);
-          return;
+          return sendJson(res, 200, storage.getModuleConfig(moduleName, Object.fromEntries((man.fields || []).map(field => [field, '']))));
         } catch (err) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Failed to read config file' }));
-          return;
+          return sendJson(res, 500, { error: err.message });
         }
       }
-
-      // Return empty default values based on fields
-      const defaults = {};
-      (man.fields || []).forEach(f => { defaults[f] = ''; });
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(defaults));
-      return;
+      return sendJson(res, 503, { error: 'Configuration service is not available.' });
     }
 
     // API: Save module config
@@ -189,16 +229,14 @@ export function start(options = {}) {
             return;
           }
 
-          const man = targetMod.manifest || (targetMod.default && targetMod.default.manifest);
-          const configFile = man.configFile || 'config.json';
-          const moduleDir = path.resolve(__dirname, '..', moduleName);
-          const configPath = path.resolve(moduleDir, configFile);
-
-          if (!fs.existsSync(moduleDir)) {
-            fs.mkdirSync(moduleDir, { recursive: true });
+          if (!storage?.saveModuleConfig) {
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Configuration service is not available.' }));
+            return;
           }
-
-          fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+          const savedConfig = storage.saveModuleConfig(moduleName, config);
+          const configure = targetMod.configure || (targetMod.default && targetMod.default.configure);
+          if (typeof configure === 'function') configure(savedConfig);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, message: 'Config saved successfully' }));
         } catch (err) {
@@ -224,12 +262,14 @@ export function start(options = {}) {
           }
           let chat = null;
           let selectedPrompt = null;
+          let history = [];
           if (storage) {
             chat = storage.upsertChat({ chatId: chatId || 'admin-playground', platform, promptCodename });
+            history = storage.getChatMessages(chat.id);
             storage.addMessage({ chatKey: chat.id, role: 'user', content: prompt });
             selectedPrompt = promptCodename ? storage.getSystemPrompt(promptCodename) : (chat.prompt_codename ? storage.getSystemPrompt(chat.prompt_codename) : null);
           }
-          const result = await targetMod.generate({ prompt, model, systemPrompt: selectedPrompt?.content });
+          const result = await targetMod.generate({ prompt, model, systemPrompt: selectedPrompt?.content, history });
           if (storage && chat) {
             storage.addMessage({ chatKey: chat.id, role: 'assistant', content: result.text, model: result.model || model || null, promptCodename: selectedPrompt?.codename || null });
           }
@@ -251,6 +291,12 @@ export function start(options = {}) {
       contentType = 'text/css; charset=utf-8';
     } else if (pathname === '/script.js') {
       targetFile = path.join(__dirname, 'interface', 'script.js');
+      contentType = 'application/javascript; charset=utf-8';
+    } else if (pathname === '/marked.js') {
+      targetFile = path.join(__dirname, 'node_modules', 'marked', 'lib', 'marked.umd.js');
+      contentType = 'application/javascript; charset=utf-8';
+    } else if (pathname === '/purify.js') {
+      targetFile = path.join(__dirname, 'node_modules', 'dompurify', 'dist', 'purify.min.js');
       contentType = 'application/javascript; charset=utf-8';
     }
 

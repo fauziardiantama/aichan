@@ -11,8 +11,21 @@ import {
   listSystemPrompts,
   getSystemPrompt,
   saveSystemPrompt,
-  deleteSystemPrompt
+  deleteSystemPrompt,
+  listProviders,
+  saveProvider,
+  listModels,
+  saveModel,
+  getModelCapabilities,
+  saveModelCapabilities,
+  deleteModelCapabilities
 } from './storage/database.js';
+import {
+  getConfigDirectory,
+  getModuleConfig,
+  initializeConfig,
+  saveModuleConfig
+} from './config.js';
 
 export {
   upsertChat,
@@ -24,14 +37,29 @@ export {
   listSystemPrompts,
   getSystemPrompt,
   saveSystemPrompt,
-  deleteSystemPrompt
+  deleteSystemPrompt,
+  listProviders,
+  saveProvider,
+  listModels,
+  saveModel,
+  getModelCapabilities,
+  saveModelCapabilities,
+  deleteModelCapabilities
+};
+
+export {
+  getConfigDirectory,
+  getModuleConfig,
+  saveModuleConfig
 };
 
 export const manifest = {
-  name: 'main'
+  name: 'main',
+  type: 'core'
 };
 
 export function start() {
+  initializeConfig();
   initializeDatabase();
   console.log('[main] Main module initialized.');
 }
@@ -59,5 +87,15 @@ export default {
   listSystemPrompts,
   getSystemPrompt,
   saveSystemPrompt,
-  deleteSystemPrompt
+  deleteSystemPrompt,
+  listProviders,
+  saveProvider,
+  listModels,
+  saveModel,
+  getModelCapabilities,
+  saveModelCapabilities,
+  deleteModelCapabilities
+  ,getConfigDirectory
+  ,getModuleConfig
+  ,saveModuleConfig
 };

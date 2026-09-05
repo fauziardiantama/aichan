@@ -37,7 +37,9 @@ aichan/
 │   └── package.json                 # Dependency openai
 ├── main/
 │   ├── index.js                     # Modul utama dan lifecycle aplikasi
-│   └── package.json                 # Manifest modul utama
+│   ├── config.js                    # Akses konfigurasi root data/config
+│   ├── package.json                 # Manifest modul utama
+│   └── storage/                     # Database dan repository storage
 ├── telegram/
 │   ├── index.js                     # Adapter Telegram dan lifecycle modul
 │   ├── config.json                  # API key dan owner ID Telegram
@@ -63,7 +65,7 @@ aichan/
 - [x] Sediakan konfigurasi provider melalui `aistudio/config.json` dan dukungan model pada `generate()`.
 - [ ] Tambahkan validasi konfigurasi, timeout, penanganan error, dan retry yang terkontrol pada request AI.
 - [ ] Tambahkan abstraction provider yang memungkinkan provider AI lain mengikuti kontrak `generate()` yang sama.
-- [ ] Tambahkan manajemen riwayat percakapan dan batas konteks agar penggunaan token tetap terkendali.
+- [x] Tambahkan manajemen riwayat percakapan pada request provider; batas konteks masih ditunda.
 
 ### Fase 3: Admin Web, Adapter, Eksekusi, & Database
 - [x] Implementasikan admin web berbasis Node.js `http` tanpa framework tambahan.
@@ -73,10 +75,11 @@ aichan/
 - [ ] Tambahkan validasi payload request dan response pada API admin serta adapter platform.
 - [ ] Rancang registry tool yang dapat mendaftarkan dan menjalankan fungsi dengan schema input/output yang tervalidasi.
 - [ ] Tetapkan SQLite sebagai storage awal dan `main` sebagai pemilik lifecycle serta akses database.
-- [ ] Tambahkan dependency database di `main/` dan tentukan lokasi data, backup, serta kebijakan retensi.
-- [ ] Rancang kontrak storage berbasis fungsi/repository untuk daftar `chat_id`, log pesan human/AI, dan system prompt berkode unik agar `telegram`, `aistudio`, dan `admin_web` tidak mengakses SQL secara langsung.
-- [ ] Implementasikan koneksi database dan migration/schema setelah desain storage disetujui.
-- [ ] Tambahkan endpoint admin dan UI untuk daftar chat, detail log pesan, prompt berdasarkan codename, pencarian, pagination, dan penghapusan setelah storage API dan kontrol akses tersedia.
+- [x] Tambahkan dependency database di `main/` dan tentukan lokasi data, backup, serta kebijakan retensi.
+- [x] Rancang kontrak storage berbasis fungsi/repository untuk daftar `chat_id`, log pesan human/AI, dan system prompt berkode unik agar `telegram`, `aistudio`, dan `admin_web` tidak mengakses SQL secara langsung.
+- [x] Implementasikan koneksi database dan migration/schema setelah desain storage disetujui.
+- [x] Tambahkan endpoint admin dan UI untuk daftar chat, detail log pesan, prompt berdasarkan codename, pencarian, pagination, dan penghapusan setelah storage API dan kontrol akses tersedia.
+- [x] Pusatkan akses konfigurasi di `main` melalui root `data/config/` dan teruskan konfigurasi ke setiap modul melalui dependency injection.
 
 ### Fase 4: Operasional & Polishing
 - [ ] Tambahkan endpoint atau tampilan health check untuk status root, provider, admin web, dan adapter Telegram.
@@ -96,10 +99,12 @@ aichan/
 - [x] Implementasikan dashboard admin, konfigurasi module, dan AI playground dasar.
 - [x] Tentukan arah database awal: SQLite dikelola oleh modul `main`.
 - [x] Sediakan discovery model provider melalui API admin dengan metadata capability yang dinormalisasi.
-- [ ] Finalisasi desain chat storage, system prompt catalog, lokasi data, backup, retensi log, dan batas akses antarmodul.
-- [ ] Rancang system prompt dengan `codename` unik, isi prompt, status aktif, dan metadata perubahan.
-- [ ] Implementasikan database tables untuk chat, message logs, dan system prompts serta storage API pada fase berikutnya.
-- [ ] Implementasikan endpoint serta UI untuk chat ID list, message logs, dan pengelolaan system prompt setelah storage API siap.
+- [x] Finalisasi desain chat storage, system prompt catalog, lokasi data, backup, retensi log, dan batas akses antarmodul.
+- [x] Rancang system prompt dengan `codename` unik, isi prompt, status aktif, dan metadata perubahan.
+- [x] Implementasikan database tables untuk chat, message logs, dan system prompts serta storage API pada fase berikutnya.
+- [x] Implementasikan endpoint serta UI untuk chat ID list, message logs, dan pengelolaan system prompt setelah storage API siap.
+- [x] Implementasikan config service untuk menyimpan konfigurasi modul di root `data/config/`.
+- [x] Kirim chat history ke provider tanpa mencampurkannya dengan system prompt; batas history belum diterapkan.
 - [ ] Tambahkan root scripts untuk menjalankan dan memvalidasi aplikasi.
 - [ ] Selesaikan integrasi Telegram dan validasi konfigurasi.
 - [ ] Tambahkan pengujian dasar serta logging dan health check.
