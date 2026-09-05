@@ -14,9 +14,11 @@ import {
   deleteSystemPrompt,
   listProviders,
   saveProvider,
+  deleteProvider,
   listModels,
   saveModel,
   getModelCapabilities,
+  listAllModelCapabilities,
   saveModelCapabilities,
   deleteModelCapabilities
 } from './storage/database.js';
@@ -40,9 +42,11 @@ export {
   deleteSystemPrompt,
   listProviders,
   saveProvider,
+  deleteProvider,
   listModels,
   saveModel,
   getModelCapabilities,
+  listAllModelCapabilities,
   saveModelCapabilities,
   deleteModelCapabilities
 };
@@ -90,9 +94,11 @@ export default {
   deleteSystemPrompt,
   listProviders,
   saveProvider,
+  deleteProvider,
   listModels,
   saveModel,
   getModelCapabilities,
+  listAllModelCapabilities,
   saveModelCapabilities,
   deleteModelCapabilities
   ,getConfigDirectory

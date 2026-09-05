@@ -12,51 +12,40 @@ const HTML_FILE = path.join(__dirname, 'interface', 'index.html');
 let server = null;
 let registeredModules = [];
 let storage = null;
-let openRouterModels = null;
-let openRouterModelsLoadedAt = 0;
 
-const OPENROUTER_CACHE_TTL_MS = 5 * 60 * 1000;
-const OPENROUTER_PROVIDER_PREFIXES = {
-  aistudio: 'google',
-  chatgpt: 'openai'
-};
-
-async function getOpenRouterModels() {
-  if (openRouterModels && Date.now() - openRouterModelsLoadedAt < OPENROUTER_CACHE_TTL_MS) {
-    return openRouterModels;
+function attachLocalCapabilities(provider, models) {
+  if (!storage || typeof storage.getModelCapabilities !== 'function') {
+    return models.map(model => ({ ...model, recorded: false, capabilities: null }));
   }
 
-  const response = await fetch('https://openrouter.ai/api/v1/models');
-  if (!response.ok) throw new Error(`OpenRouter model catalog request failed: ${response.status}`);
-  const payload = await response.json();
-  openRouterModels = {
-    byId: new Map((payload.data || []).map(model => [model.id, model])),
-    byCanonicalSlug: new Map((payload.data || []).map(model => [model.canonical_slug, model]))
-  };
-  openRouterModelsLoadedAt = Date.now();
-  return openRouterModels;
-}
-
-async function addOpenRouterMetadata(provider, models) {
-  const prefix = OPENROUTER_PROVIDER_PREFIXES[provider];
-  if (!prefix) return models;
-
-  const catalog = await getOpenRouterModels();
   return models.map(model => {
-    const openRouterId = `${prefix}/${model.id}`;
-    const catalogModel = catalog.byId.get(openRouterId)
-      || catalog.byId.get(`~${openRouterId}`)
-      || catalog.byCanonicalSlug.get(openRouterId);
-    if (!catalogModel) return model;
-
+    const caps = storage.getModelCapabilities(provider, model.id);
+    if (!caps) {
+      return {
+        ...model,
+        recorded: false,
+        capabilities: null
+      };
+    }
     return {
       ...model,
-      metadata: {
-        reasoning: catalogModel.reasoning || false,
-        architecture: {
-          input: catalogModel.architecture?.input_modalities || [],
-          output: catalogModel.architecture?.output_modalities || []
-        }
+      name: caps.display_name || model.name,
+      recorded: true,
+      capabilities: {
+        reasoning: Boolean(caps.reasoning),
+        tools: Boolean(caps.tools),
+        structured_outputs: Boolean(caps.structured_outputs),
+        text_input: Boolean(caps.text_input),
+        document_input: Boolean(caps.document_input),
+        image_input: Boolean(caps.image_input),
+        video_input: Boolean(caps.video_input),
+        audio_input: Boolean(caps.audio_input),
+        text_output: Boolean(caps.text_output),
+        document_output: Boolean(caps.document_output),
+        image_output: Boolean(caps.image_output),
+        video_output: Boolean(caps.video_output),
+        audio_output: Boolean(caps.audio_output),
+        notes: caps.notes || null
       }
     };
   });
@@ -120,7 +109,7 @@ export function start(options = {}) {
           const manifest = module.manifest || (module.default && module.default.manifest) || {};
           try {
             const models = await module.listModels();
-            return { provider: manifest.name, models: await addOpenRouterMetadata(manifest.name, models) };
+            return { provider: manifest.name, models: attachLocalCapabilities(manifest.name, models) };
           } catch (err) {
             return { provider: manifest.name, models: [], error: err.message };
           }
@@ -130,6 +119,56 @@ export function start(options = {}) {
           models: providers.flatMap(provider => provider.models)
         }))
         .catch(err => sendJson(res, 500, { error: err.message }));
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/capabilities') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      try {
+        const capabilities = typeof storage.listAllModelCapabilities === 'function'
+          ? storage.listAllModelCapabilities()
+          : [];
+        return sendJson(res, 200, { capabilities });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    if (req.method === 'POST' && pathname === '/api/capabilities') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      readBody(req)
+        .then(payload => {
+          const saved = storage.saveModelCapabilities(payload);
+          return sendJson(res, 200, { capability: saved });
+        })
+        .catch(err => sendJson(res, 400, { error: err.message }));
+      return;
+    }
+
+    if (req.method === 'DELETE' && pathname === '/api/capabilities') {
+      if (!storage) return sendJson(res, 503, { error: 'Storage is not available.' });
+      const providerKey = reqUrl.searchParams.get('providerKey');
+      const modelKey = reqUrl.searchParams.get('modelKey');
+      if (providerKey && modelKey) {
+        try {
+          const deleted = storage.deleteModelCapabilities(providerKey, modelKey);
+          return sendJson(res, deleted ? 200 : 404, { success: deleted });
+        } catch (err) {
+          return sendJson(res, 500, { error: err.message });
+        }
+      }
+
+      readBody(req)
+        .then(payload => {
+          const pKey = payload.providerKey || payload.provider;
+          const mKey = payload.modelKey || payload.model;
+          if (!pKey || !mKey) {
+            return sendJson(res, 400, { error: 'providerKey and modelKey are required.' });
+          }
+          const deleted = storage.deleteModelCapabilities(pKey, mKey);
+          return sendJson(res, deleted ? 200 : 404, { success: deleted });
+        })
+        .catch(err => sendJson(res, 400, { error: err.message }));
       return;
     }
 

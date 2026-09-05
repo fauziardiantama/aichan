@@ -19,6 +19,7 @@
       <a href="#testing" data-tab="testing">Testing</a>
       <a href="#chats" data-tab="chats">Chat Logs</a>
       <a href="#prompts" data-tab="prompts">System Prompts</a>
+      <a href="#capabilities" data-tab="capabilities">Model Capabilities</a>
       <a href="#modules" data-tab="modules">Modules & Adapters</a>
       <a href="#console" data-tab="console">System Console</a>
       <a href="#config" data-tab="config">Configuration</a>
@@ -178,7 +179,94 @@
         <span id="promptStatus" class="modal-msg"></span>
       </div>
     </div>
+
+    <div id="view-capabilities" class="view-tab content" style="display: none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Model Catalog & Capabilities</div>
+          <button class="btn" id="btnRefreshCapabilities">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Provider</th>
+              <th>Model ID</th>
+              <th>Display Name</th>
+              <th>Status</th>
+              <th>Control</th>
+            </tr>
+          </thead>
+          <tbody id="capabilitiesModelList"></tbody>
+        </table>
+      </div>
+    </div>
   </main>
+
+  <!-- Model Capabilities Modal -->
+  <div id="capabilityModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 560px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 id="capabilityModalTitle">Configure Model Capabilities</h3>
+        <button class="btn-close" onclick="closeCapabilityModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Provider</label>
+          <select class="select-input form-input" id="capProviderSelect"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model ID</label>
+          <input class="form-input" id="capModelKey" placeholder="e.g. gemini-2.5-flash">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model Name</label>
+          <input class="form-input" id="capDisplayName" placeholder="e.g. Gemini 2.5 Flash">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600; margin-top: 0.5rem;">Features</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="capReasoning"> Reasoning / Thinking</label>
+            <label class="checkbox-item"><input type="checkbox" id="capTools"> Tools / Function Calling</label>
+            <label class="checkbox-item"><input type="checkbox" id="capStructuredOutputs"> Structured Outputs</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600;">Input Modalities</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="capTextInput"> Text</label>
+            <label class="checkbox-item"><input type="checkbox" id="capDocumentInput"> Document</label>
+            <label class="checkbox-item"><input type="checkbox" id="capImageInput"> Image</label>
+            <label class="checkbox-item"><input type="checkbox" id="capVideoInput"> Video</label>
+            <label class="checkbox-item"><input type="checkbox" id="capAudioInput"> Audio</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 600;">Output Modalities</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" id="capTextOutput"> Text</label>
+            <label class="checkbox-item"><input type="checkbox" id="capDocumentOutput"> Document</label>
+            <label class="checkbox-item"><input type="checkbox" id="capImageOutput"> Image</label>
+            <label class="checkbox-item"><input type="checkbox" id="capVideoOutput"> Video</label>
+            <label class="checkbox-item"><input type="checkbox" id="capAudioOutput"> Audio</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Notes (Optional)</label>
+          <input class="form-input" id="capNotes" placeholder="Additional notes...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <span id="capStatus" class="modal-msg"></span>
+        <button class="btn btn-danger" id="btnDeleteCapability" style="display: none; margin-right: auto;">Delete</button>
+        <button class="btn" onclick="closeCapabilityModal()">Cancel</button>
+        <button class="btn btn-save" id="btnSaveCapability">Save</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Configuration Modal -->
   <div id="configModal" class="modal-backdrop" style="display: none;">

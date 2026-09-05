@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS model_capabilities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   model_id INTEGER NOT NULL UNIQUE,
   reasoning INTEGER NOT NULL DEFAULT 0 CHECK (reasoning IN (0, 1)),
+  tools INTEGER NOT NULL DEFAULT 0 CHECK (tools IN (0, 1)),
+  structured_outputs INTEGER NOT NULL DEFAULT 0 CHECK (structured_outputs IN (0, 1)),
   text_input INTEGER NOT NULL DEFAULT 0 CHECK (text_input IN (0, 1)),
   document_input INTEGER NOT NULL DEFAULT 0 CHECK (document_input IN (0, 1)),
   image_input INTEGER NOT NULL DEFAULT 0 CHECK (image_input IN (0, 1)),

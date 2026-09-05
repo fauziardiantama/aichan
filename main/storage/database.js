@@ -32,6 +32,7 @@ export function initializeDatabase() {
   database.pragma('journal_mode = WAL');
   migrateLegacyCapabilities();
   database.exec(fs.readFileSync(schemaPath, 'utf8'));
+  migrateCapabilityColumns();
 
   database.prepare(`
     INSERT OR IGNORE INTO system_prompts (codename, content, description)
@@ -39,6 +40,17 @@ export function initializeDatabase() {
   `).run('default_assistant', 'You are Ai-Chan, a helpful AI assistant.', 'Default system prompt');
 
   return database;
+}
+
+function migrateCapabilityColumns() {
+  const columns = database.pragma('table_info(model_capabilities)').map(c => c.name);
+  if (!columns.length) return;
+  if (!columns.includes('tools')) {
+    database.exec('ALTER TABLE model_capabilities ADD COLUMN tools INTEGER NOT NULL DEFAULT 0 CHECK (tools IN (0, 1))');
+  }
+  if (!columns.includes('structured_outputs')) {
+    database.exec('ALTER TABLE model_capabilities ADD COLUMN structured_outputs INTEGER NOT NULL DEFAULT 0 CHECK (structured_outputs IN (0, 1))');
+  }
 }
 
 function migrateLegacyCapabilities() {
@@ -235,6 +247,10 @@ export function saveProvider({ providerKey, displayName }) {
   return db.prepare('SELECT * FROM providers WHERE provider_key = ?').get(providerKey);
 }
 
+export function deleteProvider(providerKey) {
+  return requireDatabase().prepare('DELETE FROM providers WHERE provider_key = ?').run(providerKey).changes > 0;
+}
+
 export function listModels({ providerKey = null } = {}) {
   const query = providerKey
     ? `SELECT models.*, providers.provider_key, providers.display_name AS provider_display_name
@@ -273,6 +289,8 @@ export function saveModelCapabilities({
   modelKey,
   displayName,
   reasoning = false,
+  tools = false,
+  structuredOutputs = false,
   textInput = false,
   documentInput = false,
   imageInput = false,
@@ -291,12 +309,14 @@ export function saveModelCapabilities({
   const model = saveModel({ providerKey, modelKey, displayName });
   db.prepare(`
     INSERT INTO model_capabilities (
-      model_id, reasoning, text_input, document_input, image_input, video_input,
+      model_id, reasoning, tools, structured_outputs, text_input, document_input, image_input, video_input,
       audio_input, text_output, document_output, image_output, video_output,
       audio_output, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(model_id) DO UPDATE SET
       reasoning = excluded.reasoning,
+      tools = excluded.tools,
+      structured_outputs = excluded.structured_outputs,
       text_input = excluded.text_input,
       document_input = excluded.document_input,
       image_input = excluded.image_input,
@@ -312,6 +332,8 @@ export function saveModelCapabilities({
   `).run(
     model.id,
     reasoning ? 1 : 0,
+    tools ? 1 : 0,
+    structuredOutputs ? 1 : 0,
     textInput ? 1 : 0,
     documentInput ? 1 : 0,
     imageInput ? 1 : 0,
@@ -327,6 +349,16 @@ export function saveModelCapabilities({
   return getModelCapabilities(providerKey, modelKey);
 }
 
+export function listAllModelCapabilities() {
+  return requireDatabase().prepare(`
+    SELECT model_capabilities.*, providers.provider_key, models.model_key, models.display_name
+    FROM model_capabilities
+    JOIN models ON models.id = model_capabilities.model_id
+    JOIN providers ON providers.id = models.provider_id
+    ORDER BY providers.provider_key, models.display_name
+  `).all();
+}
+
 export function deleteModelCapabilities(providerKey, modelKey) {
   const model = requireDatabase().prepare(`
     SELECT models.id FROM models
@@ -334,6 +366,6 @@ export function deleteModelCapabilities(providerKey, modelKey) {
     WHERE providers.provider_key = ? AND models.model_key = ?
   `).get(providerKey, modelKey);
   return model
-    ? requireDatabase().prepare('DELETE FROM model_capabilities WHERE model_id = ?').run(model.id).changes > 0
+    ? requireDatabase().prepare('DELETE FROM models WHERE id = ?').run(model.id).changes > 0
     : false;
 }
