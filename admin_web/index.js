@@ -299,20 +299,31 @@ export function start(options = {}) {
             res.end(JSON.stringify({ error: `Module '${moduleName}' or generate() not found` }));
             return;
           }
-          let chat = null;
-          let selectedPrompt = null;
-          let history = [];
-          if (storage) {
-            chat = storage.upsertChat({ chatId: chatId || 'admin-playground', platform, promptCodename });
-            history = storage.getChatMessages(chat.id);
-            storage.addMessage({ chatKey: chat.id, role: 'user', content: prompt });
-            selectedPrompt = promptCodename ? storage.getSystemPrompt(promptCodename) : (chat.prompt_codename ? storage.getSystemPrompt(chat.prompt_codename) : null);
+          const adaptersMap = {};
+          for (const mod of registeredModules) {
+            const man = mod.manifest || (mod.default && mod.default.manifest);
+            if (man && man.name) {
+              adaptersMap[man.name] = mod;
+            }
           }
-          const result = await targetMod.generate({ prompt, model, systemPrompt: selectedPrompt?.content, history });
-          if (storage && chat) {
-            storage.addMessage({ chatKey: chat.id, role: 'assistant', content: result.text, model: result.model || model || null, promptCodename: selectedPrompt?.codename || null });
-          }
-          sendJson(res, 200, { ...result, chatId: chat?.chat_id || null });
+          const context = {
+            platform: 'web',
+            targetChatId: chatId || 'web-playground',
+            storage,
+            adapters: adaptersMap
+          };
+          const result = await storage.runPipeline({
+            platform: platform || 'web',
+            chatId: chatId || 'admin-playground',
+            promptCodename,
+            prompt,
+            deciderModel: targetMod,
+            toolModel: targetMod,
+            model,
+            context
+          });
+
+          sendJson(res, 200, result);
         } catch (err) {
           sendJson(res, 500, { error: err.message });
         }

@@ -77,6 +77,100 @@ export async function generate({ prompt, model = DEFAULT_MODEL, systemPrompt = n
   return { text: response.text, model };
 }
 
+export async function generateStructured({ prompt, model = DEFAULT_MODEL, systemPrompt = null, history = [], schema }) {
+  const availableClient = await getClient();
+  const contents = history
+    .filter(message => ['user', 'assistant'].includes(message.role) && message.content)
+    .map(message => ({
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: message.content }]
+    }));
+  contents.push({ role: 'user', parts: [{ text: prompt }] });
+
+  const response = await availableClient.models.generateContent({
+    model,
+    contents,
+    config: {
+      systemInstruction: systemPrompt || undefined,
+      responseMimeType: 'application/json',
+      responseSchema: schema
+    }
+  });
+
+  return JSON.parse(response.text);
+}
+
+export async function generateWithNativeTools({ model = DEFAULT_MODEL, systemPrompt = null, messages = [], tools = [] }) {
+  const availableClient = await getClient();
+  const contents = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'tool') {
+      const parsedResponse = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+      contents.push({
+        role: 'user',
+        parts: [{
+          functionResponse: {
+            name: msg.name,
+            response: parsedResponse
+          }
+        }]
+      });
+    } else if (msg.role === 'assistant' && msg.toolCalls) {
+      contents.push({
+        role: 'model',
+        parts: msg.toolCalls.map(tc => ({
+          functionCall: {
+            name: tc.name,
+            args: tc.arguments
+          }
+        }))
+      });
+    } else if (msg.content) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      });
+    }
+  }
+
+  const configObj = {};
+  if (systemPrompt) configObj.systemInstruction = systemPrompt;
+  if (tools && tools.length > 0) {
+    configObj.tools = [{
+      functionDeclarations: tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters
+      }))
+    }];
+  }
+
+  const response = await availableClient.models.generateContent({
+    model,
+    contents,
+    config: configObj
+  });
+
+  const functionCalls = response.functionCalls;
+  if (functionCalls && functionCalls.length > 0) {
+    return {
+      isFinal: false,
+      toolCalls: functionCalls.map(fc => ({
+        id: fc.id,
+        name: fc.name,
+        arguments: fc.args
+      }))
+    };
+  }
+
+  return {
+    isFinal: true,
+    text: response.text,
+    model
+  };
+}
+
 export default {
   manifest,
   start,
@@ -84,5 +178,7 @@ export default {
   status,
   configure,
   listModels,
-  generate
+  generate,
+  generateStructured,
+  generateWithNativeTools
 };

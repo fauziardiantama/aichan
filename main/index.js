@@ -28,8 +28,10 @@ import {
   initializeConfig,
   saveModuleConfig
 } from './config.js';
+import { runPipeline } from './pipeline.js';
 
 export {
+  runPipeline,
   upsertChat,
   getChat,
   listChats,
@@ -82,6 +84,7 @@ export default {
   start,
   stop,
   status,
+  runPipeline,
   upsertChat,
   getChat,
   listChats,
