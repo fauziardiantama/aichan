@@ -20,7 +20,14 @@ import {
   getModelCapabilities,
   listAllModelCapabilities,
   saveModelCapabilities,
-  deleteModelCapabilities
+  deleteModelCapabilities,
+  createTask,
+  getTask,
+  getActiveDueTasks,
+  updateTaskTrigger,
+  listTasks,
+  updateTask,
+  deleteTask
 } from './storage/database.js';
 import {
   getConfigDirectory,
@@ -29,6 +36,7 @@ import {
   saveModuleConfig
 } from './config.js';
 import { runPipeline } from './pipeline.js';
+import { startHeartbeat, stopHeartbeat } from './heartbeat.js';
 
 export {
   runPipeline,
@@ -50,7 +58,16 @@ export {
   getModelCapabilities,
   listAllModelCapabilities,
   saveModelCapabilities,
-  deleteModelCapabilities
+  deleteModelCapabilities,
+  createTask,
+  getTask,
+  getActiveDueTasks,
+  updateTaskTrigger,
+  listTasks,
+  updateTask,
+  deleteTask,
+  startHeartbeat,
+  stopHeartbeat
 };
 
 export {
@@ -71,6 +88,7 @@ export function start() {
 }
 
 export function stop() {
+  stopHeartbeat();
   closeDatabase();
   console.log('[main] Main module stopped.');
 }
@@ -103,7 +121,16 @@ export default {
   getModelCapabilities,
   listAllModelCapabilities,
   saveModelCapabilities,
-  deleteModelCapabilities
+  deleteModelCapabilities,
+  createTask,
+  getTask,
+  getActiveDueTasks,
+  updateTaskTrigger,
+  listTasks,
+  updateTask,
+  deleteTask,
+  startHeartbeat,
+  stopHeartbeat
   ,getConfigDirectory
   ,getModuleConfig
   ,saveModuleConfig

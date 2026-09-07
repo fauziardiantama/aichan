@@ -369,3 +369,103 @@ export function deleteModelCapabilities(providerKey, modelKey) {
     ? requireDatabase().prepare('DELETE FROM models WHERE id = ?').run(model.id).changes > 0
     : false;
 }
+
+export function createTask({ chatId = null, instruction, type, triggerAt, delay, active = 1 }) {
+  if (!instruction) throw new Error('tasks: instruction is required.');
+  if (!type) throw new Error("tasks: type is required ('polling' or 'recurring').");
+  if (!triggerAt) throw new Error('tasks: triggerAt is required.');
+  if (delay === undefined || delay === null) throw new Error('tasks: delay is required.');
+
+  const db = requireDatabase();
+  const result = db.prepare(`
+    INSERT INTO tasks (chat_id, instruction, type, trigger_at, delay, active)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(chatId || null, instruction, type, triggerAt, Number(delay), active ? 1 : 0);
+
+  return getTask(result.lastInsertRowid);
+}
+
+export function getTask(id) {
+  const db = requireDatabase();
+  return db.prepare(`SELECT * FROM tasks WHERE id = ?`).get(id);
+}
+
+export function getActiveDueTasks(nowIso = new Date().toISOString()) {
+  const db = requireDatabase();
+  return db.prepare(`
+    SELECT * FROM tasks
+    WHERE active = 1 AND trigger_at <= ?
+    ORDER BY trigger_at ASC
+  `).all(nowIso);
+}
+
+export function updateTaskTrigger(id, nextTriggerAtIso) {
+  if (!id || !nextTriggerAtIso) throw new Error('tasks: id and nextTriggerAtIso are required.');
+  const db = requireDatabase();
+  return db.prepare(`
+    UPDATE tasks 
+    SET trigger_at = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ?
+  `).run(nextTriggerAtIso, id).changes > 0;
+}
+
+export function listTasks({ chatId, activeOnly = true }) {
+  if (!chatId) throw new Error('tasks: chatId is required for listTasks.');
+  const db = requireDatabase();
+  let query = `SELECT * FROM tasks WHERE chat_id = ?`;
+  const params = [chatId];
+  if (activeOnly) {
+    query += ` AND active = 1`;
+  }
+  query += ` ORDER BY trigger_at ASC`;
+  return db.prepare(query).all(...params);
+}
+
+export function updateTask(id, chatId = null, updates = {}) {
+  if (!id) throw new Error('tasks: id is required for updateTask.');
+  const db = requireDatabase();
+  const fields = [];
+  const params = [];
+
+  if (updates.active !== undefined) {
+    fields.push('active = ?');
+    params.push(updates.active ? 1 : 0);
+  }
+  if (updates.instruction !== undefined) {
+    fields.push('instruction = ?');
+    params.push(updates.instruction);
+  }
+  if (updates.delay !== undefined) {
+    fields.push('delay = ?');
+    params.push(Number(updates.delay));
+  }
+  if (updates.trigger_at !== undefined) {
+    fields.push('trigger_at = ?');
+    params.push(updates.trigger_at);
+  }
+
+  if (fields.length === 0) return false;
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+
+  let query = `UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`;
+  params.push(id);
+
+  if (chatId) {
+    query += ` AND chat_id = ?`;
+    params.push(chatId);
+  }
+
+  return db.prepare(query).run(...params).changes > 0;
+}
+
+export function deleteTask(id, chatId = null) {
+  if (!id) throw new Error('tasks: id is required for deleteTask.');
+  const db = requireDatabase();
+  let query = `DELETE FROM tasks WHERE id = ?`;
+  const params = [id];
+  if (chatId) {
+    query += ` AND chat_id = ?`;
+    params.push(chatId);
+  }
+  return db.prepare(query).run(...params).changes > 0;
+}

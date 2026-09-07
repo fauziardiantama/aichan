@@ -75,3 +75,18 @@ CREATE TABLE IF NOT EXISTS model_capabilities (
 CREATE INDEX IF NOT EXISTS idx_chats_updated_at ON chats(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id_created_at ON messages(chat_id, created_at, id);
 CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id INTEGER,
+  instruction TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('polling', 'recurring')),
+  trigger_at TEXT NOT NULL,
+  delay INTEGER NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_active_due ON tasks(active, trigger_at) WHERE active = 1;

@@ -2,11 +2,13 @@ import { getTool, getAllSchemas, registerTool } from './registry.js';
 import { timeTool } from './definitions/time.js';
 import { notifyTool } from './definitions/notify.js';
 import { instanceTool } from './definitions/instance.js';
+import { taskerTool } from './definitions/tasker.js';
 
-// Registrasi placeholder tools awal
+// Registrasi tools
 registerTool(timeTool);
 registerTool(notifyTool);
 registerTool(instanceTool);
+registerTool(taskerTool);
 
 export function listToolSchemas() {
   return getAllSchemas();

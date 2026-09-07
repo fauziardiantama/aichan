@@ -16,6 +16,16 @@ telegram.start({
   config: main.getModuleConfig('telegram')
 });
 
+main.startHeartbeat({
+  storage: main,
+  runPipeline: main.runPipeline,
+  provider: aistudio,
+  adapters: {
+    telegram: { sendMessage: telegram.sendMessage }
+  },
+  intervalMs: 15000
+});
+
 adminWeb.start({
   modules: [main, telegram, aistudio, chatgpt],
   storage: main
