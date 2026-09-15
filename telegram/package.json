@@ -1,9 +1,0 @@
-{
-  "name": "telegram",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "dependencies": {
-    "telegraf": "^4.16.3"
-  }
-}
