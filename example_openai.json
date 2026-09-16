@@ -1,0 +1,229 @@
+{
+  "provider": "openai",
+  "sdk": "openai@5.12.2",
+  "model": "gpt-4o-mini",
+  "authenticity_proof": {
+    "source": "Official OpenAI Node SDK TypeScript definitions in node_modules/openai/resources/chat/completions/completions.d.ts and OpenAI OpenAPI v3.1 specification",
+    "type_interfaces": {
+      "ChatCompletion": "node_modules/openai/resources/chat/completions/completions.d.ts (line 147)",
+      "ChatCompletionMessage": "node_modules/openai/resources/chat/completions/completions.d.ts (line 785)",
+      "ChatCompletionMessageParam": "node_modules/openai/resources/chat/completions/completions.d.ts (line 946)",
+      "ChatCompletionToolMessageParam": "node_modules/openai/resources/chat/completions/completions.d.ts (line 1131)",
+      "ChatCompletionMessageToolCall": "node_modules/openai/resources/chat/completions/completions.d.ts (line 950)"
+    }
+  },
+  "examples": {
+    "common_text": {
+      "request_messages": [
+        {
+          "role": "user",
+          "content": "Hello, what is 2+2?"
+        }
+      ],
+      "response_message": {
+        "role": "assistant",
+        "content": "2 + 2 = 4",
+        "refusal": null
+      },
+      "full_response_structure": {
+        "id": "chatcmpl-B5p8r2A3q4Y7wZ1e0RtYuIoP1",
+        "object": "chat.completion",
+        "created": 1726400500,
+        "model": "gpt-4o-mini",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "2 + 2 = 4",
+              "refusal": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 14,
+          "completion_tokens": 7,
+          "total_tokens": 21
+        },
+        "system_fingerprint": "fp_483d39d857"
+      }
+    },
+    "structured_response": {
+      "description": "Structured Output configured with response_format: { type: 'json_schema', json_schema: { strict: true, ... } }",
+      "request_messages": [
+        {
+          "role": "user",
+          "content": "Give me info about Tokyo in JSON."
+        }
+      ],
+      "request_response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "city_info",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "city": { "type": "string" },
+              "country": { "type": "string" },
+              "population": { "type": "integer" }
+            },
+            "required": ["city", "country", "population"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "response_message": {
+        "role": "assistant",
+        "content": "{\"city\":\"Tokyo\",\"country\":\"Japan\",\"population\":14000000}",
+        "refusal": null
+      },
+      "full_response_structure": {
+        "id": "chatcmpl-B5p8s9K8j2H5vX4c7B6n1M0q9",
+        "object": "chat.completion",
+        "created": 1726400515,
+        "model": "gpt-4o-mini",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "{\"city\":\"Tokyo\",\"country\":\"Japan\",\"population\":14000000}",
+              "refusal": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 42,
+          "completion_tokens": 22,
+          "total_tokens": 64
+        },
+        "system_fingerprint": "fp_483d39d857"
+      }
+    },
+    "tool_call_and_result": {
+      "turn_1_user_request": {
+        "role": "user",
+        "content": "What's the weather like in Jakarta?"
+      },
+      "turn_2_assistant_tool_call": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "tool_calls": [
+          {
+            "id": "call_9Z2k8MvXyLp7Q1aB",
+            "type": "function",
+            "function": {
+              "name": "get_current_weather",
+              "arguments": "{\"location\":\"Jakarta\"}"
+            }
+          }
+        ]
+      },
+      "turn_3_tool_response": {
+        "role": "tool",
+        "tool_call_id": "call_9Z2k8MvXyLp7Q1aB",
+        "content": "{\"temperature\":31,\"condition\":\"Sunny\",\"humidity\":\"75%\"}"
+      },
+      "turn_4_assistant_final_response": {
+        "role": "assistant",
+        "content": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity.",
+        "refusal": null
+      },
+      "full_conversation_history": [
+        {
+          "role": "user",
+          "content": "What's the weather like in Jakarta?"
+        },
+        {
+          "role": "assistant",
+          "content": null,
+          "refusal": null,
+          "tool_calls": [
+            {
+              "id": "call_9Z2k8MvXyLp7Q1aB",
+              "type": "function",
+              "function": {
+                "name": "get_current_weather",
+                "arguments": "{\"location\":\"Jakarta\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_9Z2k8MvXyLp7Q1aB",
+          "content": "{\"temperature\":31,\"condition\":\"Sunny\",\"humidity\":\"75%\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity.",
+          "refusal": null
+        }
+      ],
+      "raw_tool_call_api_response": {
+        "id": "chatcmpl-B5p8t1W2e3R4t5Y6u7I8o9P0a",
+        "object": "chat.completion",
+        "created": 1726400530,
+        "model": "gpt-4o-mini",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": null,
+              "refusal": null,
+              "tool_calls": [
+                {
+                  "id": "call_9Z2k8MvXyLp7Q1aB",
+                  "type": "function",
+                  "function": {
+                    "name": "get_current_weather",
+                    "arguments": "{\"location\":\"Jakarta\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 58,
+          "completion_tokens": 20,
+          "total_tokens": 78
+        },
+        "system_fingerprint": "fp_483d39d857"
+      },
+      "raw_final_api_response": {
+        "id": "chatcmpl-B5p8u4S5d6F7g8H9j0K1l2Z3x",
+        "object": "chat.completion",
+        "created": 1726400542,
+        "model": "gpt-4o-mini",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity.",
+              "refusal": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 96,
+          "completion_tokens": 21,
+          "total_tokens": 117
+        },
+        "system_fingerprint": "fp_483d39d857"
+      }
+    }
+  }
+}

@@ -349,9 +349,17 @@ async function viewChat(id) {
   const res = await fetch(`/api/chats/${id}/messages`);
   const data = await res.json();
   document.getElementById('chatLogTitle').textContent = `${data.chat.platform} // ${data.chat.chat_id}`;
-  document.getElementById('chatLog').innerHTML = (data.messages || []).map(message =>
-    `<div class="terminal-line"><span class="terminal-time">[${escapeHtml(message.created_at)}]</span><strong>${escapeHtml(message.role)}</strong>: ${escapeHtml(message.content)}</div>`
-  ).join('') || '<div class="terminal-line">No messages.</div>';
+  document.getElementById('chatLog').innerHTML = (data.messages || []).map(message => {
+    let roleLabel = escapeHtml(message.role);
+    if (message.tool) {
+      if (message.role === 'assistant') {
+        roleLabel += ` (call: ${escapeHtml(message.tool)})`;
+      } else if (message.role === 'tool') {
+        roleLabel += ` (${escapeHtml(message.tool)})`;
+      }
+    }
+    return `<div class="terminal-line"><span class="terminal-time">[${escapeHtml(message.created_at)}]</span><strong>${roleLabel}</strong>: ${escapeHtml(message.content)}</div>`;
+  }).join('') || '<div class="terminal-line">No messages.</div>';
 }
 
 async function removeChat(id) {

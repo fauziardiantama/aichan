@@ -25,13 +25,14 @@ CREATE TABLE IF NOT EXISTS messages (
   chat_id INTEGER NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system', 'tool')),
   content TEXT,
-  tool_calls TEXT,
-  tool_call_id TEXT,
-  name TEXT,
+  tool TEXT,
+  call_id TEXT,
+  linked_message_id INTEGER,
   model TEXT,
   prompt_codename TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY (linked_message_id) REFERENCES messages(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS providers (
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS model_capabilities (
 
 CREATE INDEX IF NOT EXISTS idx_chats_updated_at ON chats(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id_created_at ON messages(chat_id, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_messages_linked_message_id ON messages(linked_message_id);
 CREATE INDEX IF NOT EXISTS idx_models_provider_id ON models(provider_id);
 
 CREATE TABLE IF NOT EXISTS tasks (

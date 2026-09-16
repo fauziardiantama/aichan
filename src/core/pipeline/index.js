@@ -78,30 +78,23 @@ export async function runPipeline({
     throw err;
   }
 
-  // Jika tidak butuh tool, langsung kembalikan jawaban
-  if (!decision.need_tool) {
-    if (chat && db) {
-      db.addMessage({
-        chatKey: chat.id,
-        role: 'assistant',
-        content: decision.response_text,
-        model,
-        promptCodename: promptCodename || chat.prompt_codename || null
-      });
-    }
-    return { text: decision.response_text, chatId: chat?.chat_id || null };
-  }
-
-  // --- STAGE 2: Eskalasi ke Model Tools (tools: true) ---
+  // Simpan hasil Stage 1 ke DB
   if (chat && db) {
     db.addMessage({
       chatKey: chat.id,
       role: 'assistant',
-      content: decision.response_text,
+      content: JSON.stringify(decision),
       model,
       promptCodename: promptCodename || chat.prompt_codename || null
     });
   }
+
+  // Jika tidak butuh tool, langsung kembalikan jawaban
+  if (!decision.need_tool) {
+    return { text: decision.response_text, chatId: chat?.chat_id || null };
+  }
+
+  // --- STAGE 2: Eskalasi ke Model Tools (tools: true) ---
 
   let stage2SystemPrompt = activeSystemPrompt || 'Instruksi: Selesaikan permintaan pengguna menggunakan tools yang tersedia.';
   if (decision.response_text) {
@@ -111,9 +104,17 @@ export async function runPipeline({
   let toolMessages = [
     ...currentMessages,
     { role: 'user', content: prompt },
-    { role: 'assistant', content: decision.response_text || '' },
+    { role: 'assistant', content: JSON.stringify(decision) },
     { role: 'user', content: '' }
   ];
+
+  if (chat && db) {
+    db.addMessage({
+      chatKey: chat.id,
+      role: 'user',
+      content: ''
+    });
+  }
 
   const maxLoops = 5;
   for (let i = 0; i < maxLoops; i++) {
@@ -151,42 +152,71 @@ export async function runPipeline({
       return { text: response.text, chatId: chat?.chat_id || null };
     }
 
-    toolMessages.push({
-      role: 'assistant',
-      toolCalls: response.toolCalls
-    });
-    if (chat && db) {
-      db.addMessage({
-        chatKey: chat.id,
-        role: 'assistant',
-        content: null,
-        toolCalls: response.toolCalls,
-        model,
-        promptCodename: promptCodename || chat.prompt_codename || null
-      });
-    }
+    let parentAssistantId = null;
+    for (let j = 0; j < response.toolCalls.length; j++) {
+      const call = response.toolCalls[j];
+      const toolName = call.name;
+      const callId = call.id || null;
+      const argsStr = JSON.stringify(call.arguments || {});
 
-    for (const call of response.toolCalls) {
-      const toolOutput = await executeTool(call.name, call.arguments, context);
-      const outputStr = JSON.stringify(toolOutput);
-
-      toolMessages.push({
-        role: 'tool',
-        toolCallId: call.id,
-        name: call.name,
-        content: outputStr
-      });
+      let savedMessage = null;
       if (chat && db) {
-        db.addMessage({
+        savedMessage = db.addMessage({
           chatKey: chat.id,
-          role: 'tool',
-          content: outputStr,
-          toolCallId: call.id,
-          name: call.name,
+          role: 'assistant',
+          content: argsStr,
+          tool: toolName,
+          callId,
+          linkedMessageId: parentAssistantId,
           model,
           promptCodename: promptCodename || chat.prompt_codename || null
         });
+        if (j === 0 && savedMessage) {
+          parentAssistantId = savedMessage.id;
+        }
       }
+
+      toolMessages.push({
+        role: 'assistant',
+        content: argsStr,
+        tool: toolName,
+        call_id: callId,
+        linked_message_id: parentAssistantId
+      });
+    }
+
+    let parentToolId = null;
+    for (let j = 0; j < response.toolCalls.length; j++) {
+      const call = response.toolCalls[j];
+      const toolOutput = await executeTool(call.name, call.arguments, context);
+      const outputStr = JSON.stringify(toolOutput);
+      const toolName = call.name;
+      const callId = call.id || null;
+
+      let savedMessage = null;
+      if (chat && db) {
+        savedMessage = db.addMessage({
+          chatKey: chat.id,
+          role: 'tool',
+          content: outputStr,
+          tool: toolName,
+          callId,
+          linkedMessageId: parentToolId,
+          model,
+          promptCodename: promptCodename || chat.prompt_codename || null
+        });
+        if (j === 0 && savedMessage) {
+          parentToolId = savedMessage.id;
+        }
+      }
+
+      toolMessages.push({
+        role: 'tool',
+        content: outputStr,
+        tool: toolName,
+        call_id: callId,
+        linked_message_id: parentToolId
+      });
     }
   }
 

@@ -116,22 +116,30 @@ export class ChatGPTProvider {
       if (msg.role === 'tool') {
         messages.push({
           role: 'tool',
-          tool_call_id: msg.toolCallId,
-          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+          tool_call_id: msg.call_id,
+          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || {})
         });
-      } else if (msg.role === 'assistant' && msg.toolCalls) {
-        messages.push({
-          role: 'assistant',
-          tool_calls: msg.toolCalls.map(tc => ({
-            id: tc.id,
-            type: 'function',
-            function: {
-              name: tc.name,
-              arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {})
-            }
-          }))
-        });
-      } else if (msg.content) {
+      } else if (msg.role === 'assistant' && msg.tool) {
+        const toolCallObj = {
+          id: msg.call_id,
+          type: 'function',
+          function: {
+            name: msg.tool,
+            arguments: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || {})
+          }
+        };
+
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant' && Array.isArray(lastMsg.tool_calls)) {
+          lastMsg.tool_calls.push(toolCallObj);
+        } else {
+          messages.push({
+            role: 'assistant',
+            content: null,
+            tool_calls: [toolCallObj]
+          });
+        }
+      } else if (msg.content !== null && msg.content !== undefined) {
         messages.push({
           role: msg.role,
           content: msg.content
@@ -166,21 +174,29 @@ export class ChatGPTProvider {
       if (msg.role === 'tool') {
         formattedMessages.push({
           role: 'tool',
-          tool_call_id: msg.toolCallId,
-          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+          tool_call_id: msg.call_id,
+          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || {})
         });
-      } else if (msg.role === 'assistant' && msg.toolCalls) {
-        formattedMessages.push({
-          role: 'assistant',
-          tool_calls: msg.toolCalls.map(tc => ({
-            id: tc.id,
-            type: 'function',
-            function: {
-              name: tc.name,
-              arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {})
-            }
-          }))
-        });
+      } else if (msg.role === 'assistant' && msg.tool) {
+        const toolCallObj = {
+          id: msg.call_id,
+          type: 'function',
+          function: {
+            name: msg.tool,
+            arguments: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || {})
+          }
+        };
+
+        const lastMsg = formattedMessages[formattedMessages.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant' && Array.isArray(lastMsg.tool_calls)) {
+          lastMsg.tool_calls.push(toolCallObj);
+        } else {
+          formattedMessages.push({
+            role: 'assistant',
+            content: null,
+            tool_calls: [toolCallObj]
+          });
+        }
       } else if (msg.content !== null && msg.content !== undefined) {
         formattedMessages.push({
           role: msg.role,

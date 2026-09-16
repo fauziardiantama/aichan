@@ -129,33 +129,31 @@ export class DatabaseManager {
       chat_id: row.chat_id,
       role: row.role,
       content: row.content,
+      tool: row.tool,
+      call_id: row.call_id,
+      linked_message_id: row.linked_message_id,
       model: row.model,
       prompt_codename: row.prompt_codename,
-      created_at: row.created_at,
-      ...(row.tool_calls ? { toolCalls: JSON.parse(row.tool_calls) } : {}),
-      ...(row.tool_call_id ? { toolCallId: row.tool_call_id } : {}),
-      ...(row.name ? { name: row.name } : {})
+      created_at: row.created_at
     }));
   }
 
-  addMessage({ chatKey, role, content = null, toolCalls = null, toolCallId = null, name = null, model = null, promptCodename = null }) {
+  addMessage({ chatKey, role, content = null, tool = null, callId = null, linkedMessageId = null, model = null, promptCodename = null }) {
     if (!chatKey || !['user', 'assistant', 'system', 'tool'].includes(role)) {
       throw new Error('chatKey and valid role are required.');
     }
-    if (role !== 'assistant' && !content) {
+    if (role !== 'assistant' && (content === null || content === undefined)) {
       throw new Error('content is required for user, system, and tool roles.');
     }
-    if (role === 'assistant' && !content && !toolCalls) {
-      //TEMPORARY FIX
+    if (role === 'assistant' && (content === null || content === undefined) && !tool) {
       return null;
     }
 
     const db = this.requireDb();
-    const toolCallsJson = toolCalls ? JSON.stringify(toolCalls) : null;
     const result = db.prepare(`
-      INSERT INTO messages (chat_id, role, content, tool_calls, tool_call_id, name, model, prompt_codename)
+      INSERT INTO messages (chat_id, role, content, tool, call_id, linked_message_id, model, prompt_codename)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(chatKey, role, content !== null ? String(content) : null, toolCallsJson, toolCallId, name, model, promptCodename);
+    `).run(chatKey, role, content !== null ? String(content) : null, tool, callId, linkedMessageId, model, promptCodename);
     this.touchChat(chatKey);
     return db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
   }

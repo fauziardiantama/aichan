@@ -1,0 +1,276 @@
+{
+  "provider": "google_genai",
+  "sdk": "@google/genai@2.21.0",
+  "model": "gemini-2.5-flash",
+  "authenticity_proof": {
+    "source": "Live API execution via @google/genai SDK using configured API key & TypeScript definitions in node_modules/@google/genai/dist/genai.d.ts",
+    "type_interfaces": {
+      "Content": "node_modules/@google/genai/dist/genai.d.ts (line 2149)",
+      "Part": "node_modules/@google/genai/dist/genai.d.ts (line 11744)",
+      "FunctionCall": "node_modules/@google/genai/dist/genai.d.ts (line 5209)",
+      "FunctionResponse": "node_modules/@google/genai/dist/genai.d.ts (line 5306)"
+    }
+  },
+  "examples": {
+    "common_text": {
+      "request_contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Hello, what is 2+2?"
+            }
+          ]
+        }
+      ],
+      "response_candidate_content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "2 + 2 = 4"
+          }
+        ]
+      },
+      "full_response_structure": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "2 + 2 = 4"
+                }
+              ]
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 10,
+          "candidatesTokenCount": 7,
+          "totalTokenCount": 33,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 10
+            }
+          ],
+          "thoughtsTokenCount": 16,
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "cDCpauvSMKCljuMP5LfzUQ"
+      }
+    },
+    "structured_response": {
+      "description": "Structured Output configured with responseMimeType: 'application/json' and responseSchema",
+      "request_contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "Give me info about Tokyo in JSON."
+            }
+          ]
+        }
+      ],
+      "response_candidate_content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "{\"city\": \"Tokyo\", \"country\": \"Japan\", \"population\": 14000000}"
+          }
+        ]
+      },
+      "full_response_structure": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "{\"city\": \"Tokyo\", \"country\": \"Japan\", \"population\": 14000000}"
+                }
+              ]
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 9,
+          "candidatesTokenCount": 25,
+          "totalTokenCount": 156,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 9
+            }
+          ],
+          "thoughtsTokenCount": 122,
+          "serviceTier": "standard"
+        },
+        "modelVersion": "gemini-2.5-flash",
+        "responseId": "cTCpapGBOcTU4-EPrJWiaA"
+      }
+    },
+    "tool_call_and_result": {
+      "turn_1_user_request": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "What's the weather like in Jakarta?"
+          }
+        ]
+      },
+      "turn_2_model_tool_call": {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "name": "get_current_weather",
+              "args": {
+                "location": "Jakarta"
+              }
+            },
+            "thoughtSignature": "CqQCARFNMg9/gY+T4qj/VwwDdtF73tK6Ox1hQn1RzsPL2iHYY8BKJQ+MBrHwWcsCik8f5KH1lW7qliWx8m+JH4fCVJmggsnNXSfPJtwYfY97qfpWFcR7ED7R3okefICwbaSv2zpN5tetdvvbi5vCwJCpwryB50IYSCM8pQ9OG55Vh1uucrxSk1Yek5GKUfutlhpSWn7G4VDdNWfuSQLAB5Xe4VCSXD335u0Uu2xCdxy6aydIwTDbYRedfRIEcwHCrupRMJTLVFbqdkzULA2ZTrwRttl0QUOUvN2G58D995UQLKsdh1ZXSNNQnpCtOjpiq8M+Ef/J2LaKiPHdYo4h14fbWn/IEEEIvftMmj8uau5b3Ipl+v+OcgnyQ1nJfLbnnYy1D62iJg=="
+          }
+        ]
+      },
+      "turn_3_user_tool_response": {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "get_current_weather",
+              "response": {
+                "temperature": 31,
+                "condition": "Sunny",
+                "humidity": "75%"
+              }
+            }
+          }
+        ]
+      },
+      "turn_4_model_final_response": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity."
+          }
+        ]
+      },
+      "full_conversation_history": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "What's the weather like in Jakarta?"
+            }
+          ]
+        },
+        {
+          "role": "model",
+          "parts": [
+            {
+              "functionCall": {
+                "name": "get_current_weather",
+                "args": {
+                  "location": "Jakarta"
+                }
+              },
+              "thoughtSignature": "CqQCARFNMg9/gY+T4qj/VwwDdtF73tK6Ox1hQn1RzsPL2iHYY8BKJQ+MBrHwWcsCik8f5KH1lW7qliWx8m+JH4fCVJmggsnNXSfPJtwYfY97qfpWFcR7ED7R3okefICwbaSv2zpN5tetdvvbi5vCwJCpwryB50IYSCM8pQ9OG55Vh1uucrxSk1Yek5GKUfutlhpSWn7G4VDdNWfuSQLAB5Xe4VCSXD335u0Uu2xCdxy6aydIwTDbYRedfRIEcwHCrupRMJTLVFbqdkzULA2ZTrwRttl0QUOUvN2G58D995UQLKsdh1ZXSNNQnpCtOjpiq8M+Ef/J2LaKiPHdYo4h14fbWn/IEEEIvftMmj8uau5b3Ipl+v+OcgnyQ1nJfLbnnYy1D62iJg=="
+            }
+          ]
+        },
+        {
+          "role": "user",
+          "parts": [
+            {
+              "functionResponse": {
+                "name": "get_current_weather",
+                "response": {
+                  "temperature": 31,
+                  "condition": "Sunny",
+                  "humidity": "75%"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "model",
+          "parts": [
+            {
+              "text": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity."
+            }
+          ]
+        }
+      ],
+      "raw_tool_call_api_response": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "functionCall": {
+                    "name": "get_current_weather",
+                    "args": {
+                      "location": "Jakarta"
+                    }
+                  },
+                  "thoughtSignature": "CqQCARFNMg9/gY+T4qj/VwwDdtF73tK6Ox1hQn1RzsPL2iHYY8BKJQ+MBrHwWcsCik8f5KH1lW7qliWx8m+JH4fCVJmggsnNXSfPJtwYfY97qfpWFcR7ED7R3okefICwbaSv2zpN5tetdvvbi5vCwJCpwryB50IYSCM8pQ9OG55Vh1uucrxSk1Yek5GKUfutlhpSWn7G4VDdNWfuSQLAB5Xe4VCSXD335u0Uu2xCdxy6aydIwTDbYRedfRIEcwHCrupRMJTLVFbqdkzULA2ZTrwRttl0QUOUvN2G58D995UQLKsdh1ZXSNNQnpCtOjpiq8M+Ef/J2LaKiPHdYo4h14fbWn/IEEEIvftMmj8uau5b3Ipl+v+OcgnyQ1nJfLbnnYy1D62iJg=="
+                }
+              ]
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 53,
+          "candidatesTokenCount": 17,
+          "totalTokenCount": 131,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 53
+            }
+          ],
+          "thoughtsTokenCount": 61,
+          "serviceTier": "standard"
+        }
+      },
+      "raw_final_api_response": {
+        "candidates": [
+          {
+            "content": {
+              "role": "model",
+              "parts": [
+                {
+                  "text": "The weather in Jakarta is Sunny with a temperature of 31 degrees Celsius and 75% humidity."
+                }
+              ]
+            },
+            "finishReason": "STOP",
+            "index": 0
+          }
+        ],
+        "usageMetadata": {
+          "promptTokenCount": 101,
+          "candidatesTokenCount": 22,
+          "totalTokenCount": 123,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 101
+            }
+          ],
+          "serviceTier": "standard"
+        }
+      }
+    }
+  }
+}

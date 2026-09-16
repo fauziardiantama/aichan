@@ -112,27 +112,42 @@ export class AIStudioProvider {
 
     for (const msg of history) {
       if (msg.role === 'tool') {
-        const parsedResponse = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-        contents.push({
-          role: 'user',
-          parts: [{
-            functionResponse: {
-              name: msg.name,
-              response: parsedResponse
-            }
-          }]
-        });
-      } else if (msg.role === 'assistant' && msg.toolCalls) {
-        contents.push({
-          role: 'model',
-          parts: msg.toolCalls.map(tc => ({
-            functionCall: {
-              name: tc.name,
-              args: tc.arguments
-            }
-          }))
-        });
-      } else if (msg.content) {
+        const parsedResponse = typeof msg.content === 'string' ? JSON.parse(msg.content) : (msg.content || {});
+        const responsePart = {
+          functionResponse: {
+            name: msg.tool,
+            response: parsedResponse
+          }
+        };
+
+        const lastTurn = contents[contents.length - 1];
+        if (lastTurn && lastTurn.role === 'user' && lastTurn.parts[0]?.functionResponse) {
+          lastTurn.parts.push(responsePart);
+        } else {
+          contents.push({
+            role: 'user',
+            parts: [responsePart]
+          });
+        }
+      } else if (msg.role === 'assistant' && msg.tool) {
+        const parsedArgs = typeof msg.content === 'string' ? JSON.parse(msg.content) : (msg.content || {});
+        const callPart = {
+          functionCall: {
+            name: msg.tool,
+            args: parsedArgs
+          }
+        };
+
+        const lastTurn = contents[contents.length - 1];
+        if (lastTurn && lastTurn.role === 'model' && lastTurn.parts[0]?.functionCall) {
+          lastTurn.parts.push(callPart);
+        } else {
+          contents.push({
+            role: 'model',
+            parts: [callPart]
+          });
+        }
+      } else if (msg.content !== null && msg.content !== undefined) {
         contents.push({
           role: msg.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: msg.content }]
@@ -160,26 +175,41 @@ export class AIStudioProvider {
 
     for (const msg of messages) {
       if (msg.role === 'tool') {
-        const parsedResponse = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-        contents.push({
-          role: 'user',
-          parts: [{
-            functionResponse: {
-              name: msg.name,
-              response: parsedResponse
-            }
-          }]
-        });
-      } else if (msg.role === 'assistant' && msg.toolCalls) {
-        contents.push({
-          role: 'model',
-          parts: msg.toolCalls.map(tc => ({
-            functionCall: {
-              name: tc.name,
-              args: tc.arguments
-            }
-          }))
-        });
+        const parsedResponse = typeof msg.content === 'string' ? JSON.parse(msg.content) : (msg.content || {});
+        const responsePart = {
+          functionResponse: {
+            name: msg.tool,
+            response: parsedResponse
+          }
+        };
+
+        const lastTurn = contents[contents.length - 1];
+        if (lastTurn && lastTurn.role === 'user' && lastTurn.parts[0]?.functionResponse) {
+          lastTurn.parts.push(responsePart);
+        } else {
+          contents.push({
+            role: 'user',
+            parts: [responsePart]
+          });
+        }
+      } else if (msg.role === 'assistant' && msg.tool) {
+        const parsedArgs = typeof msg.content === 'string' ? JSON.parse(msg.content) : (msg.content || {});
+        const callPart = {
+          functionCall: {
+            name: msg.tool,
+            args: parsedArgs
+          }
+        };
+
+        const lastTurn = contents[contents.length - 1];
+        if (lastTurn && lastTurn.role === 'model' && lastTurn.parts[0]?.functionCall) {
+          lastTurn.parts.push(callPart);
+        } else {
+          contents.push({
+            role: 'model',
+            parts: [callPart]
+          });
+        }
       } else if (msg.content !== null && msg.content !== undefined) {
         contents.push({
           role: msg.role === 'assistant' ? 'model' : 'user',
