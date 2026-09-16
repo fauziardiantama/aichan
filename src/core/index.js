@@ -18,8 +18,8 @@ export class CoreEngine {
     this.adapters = adapters;
 
     for (const [platform, adapter] of Object.entries(this.adapters)) {
-      adapter.onMessage(async ({ chatId, text }) => {
-        return await this.chat({ platform, chatId, text });
+      adapter.onMessage(async ({ chatId, text, callback }) => {
+        await this.chat({ platform, chatId, text, callback });
       });
     }
 
@@ -69,7 +69,8 @@ export class CoreEngine {
     text,
     model = null,
     promptCodename = null,
-    providerKey = null
+    providerKey = null,
+    callback
   }) {
     const selectedProvider = (providerKey && this.providers[providerKey]) || this.getDefaultProvider();
     if (!selectedProvider) {
@@ -84,7 +85,7 @@ export class CoreEngine {
       adapters: this.adapters
     };
 
-    return await runPipeline({
+    await runPipeline({
       platform,
       chatId: String(chatId),
       prompt: text,
@@ -93,7 +94,8 @@ export class CoreEngine {
       deciderModel: selectedProvider,
       toolModel: selectedProvider,
       context,
-      database: this.database
+      database: this.database,
+      callback
     });
   }
 }

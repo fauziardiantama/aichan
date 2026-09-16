@@ -32,13 +32,20 @@ try {
     throw new Error('Telegram manifest mismatch');
   }
   let messageHandled = false;
-  telegram.onMessage(async ({ chatId, text }) => {
+  let replyReceived = null;
+  telegram.onMessage(async ({ chatId, text, callback }) => {
     messageHandled = true;
-    return { text: 'Echo: ' + text };
+    await callback({ text: 'Echo: ' + text });
   });
   // Simulate message handling
-  const res = await telegram.messageHandler({ chatId: '123', text: 'Test message' });
-  if (!messageHandled || res.text !== 'Echo: Test message') {
+  await telegram.messageHandler({
+    chatId: '123',
+    text: 'Test message',
+    callback: async (msg) => {
+      replyReceived = msg;
+    }
+  });
+  if (!messageHandled || !replyReceived || replyReceived.text !== 'Echo: Test message') {
     throw new Error('Telegram onMessage handler failed');
   }
   console.log('✓ TelegramAdapter contract OK');

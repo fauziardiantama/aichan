@@ -228,21 +228,64 @@ async function sendChatMessage() {
       })
     });
 
-    const data = await res.json();
-    const bubble = aiMsgDiv.querySelector('.chat-bubble');
-
-    if (res.ok && data.text) {
-      bubble.style.color = '';
-      bubble.style.fontStyle = '';
-      bubble.classList.add('markdown-content');
-      bubble.innerHTML = DOMPurify.sanitize(marked.parse(data.text));
-      if (chatStatus) chatStatus.textContent = '[Ready] Response received successfully.';
-    } else {
+    if (!res.ok) {
+      const bubble = aiMsgDiv.querySelector('.chat-bubble');
       bubble.style.color = '#f87171';
       bubble.style.fontStyle = '';
-      bubble.textContent = `Error: ${data.error || 'Failed to generate response'}`;
-      if (chatStatus) chatStatus.textContent = '[Error] Generation failed. Check API key in aistudio config.';
+      bubble.textContent = `Error: HTTP ${res.status}`;
+      if (chatStatus) chatStatus.textContent = '[Error] Generation failed.';
+      return;
     }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let currentAiDiv = aiMsgDiv;
+    let isFirstMessage = true;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = JSON.parse(trimmed.slice(5).trim());
+
+        if (payload.error) {
+          const bubble = currentAiDiv.querySelector('.chat-bubble');
+          bubble.style.color = '#f87171';
+          bubble.style.fontStyle = '';
+          bubble.textContent = `Error: ${payload.error}`;
+          if (chatStatus) chatStatus.textContent = '[Error] Generation failed.';
+          continue;
+        }
+
+        if (payload.text) {
+          if (!isFirstMessage) {
+            currentAiDiv = document.createElement('div');
+            currentAiDiv.className = 'chat-message ai';
+            currentAiDiv.innerHTML = `
+              <div class="chat-author">Ai-Chan // ${escapeHtml(provider)} // ${escapeHtml(model)}</div>
+              <div class="chat-bubble"></div>
+            `;
+            chatArea.appendChild(currentAiDiv);
+          }
+
+          const bubble = currentAiDiv.querySelector('.chat-bubble');
+          bubble.style.color = '';
+          bubble.style.fontStyle = '';
+          bubble.classList.add('markdown-content');
+          bubble.innerHTML = DOMPurify.sanitize(marked.parse(payload.text));
+          isFirstMessage = false;
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }
+      }
+    }
+    if (chatStatus) chatStatus.textContent = '[Ready] Response received successfully.';
   } catch (err) {
     const bubble = aiMsgDiv.querySelector('.chat-bubble');
     bubble.style.color = '#f87171';

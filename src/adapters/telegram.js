@@ -41,10 +41,16 @@ export class TelegramAdapter {
 
         if (this.messageHandler) {
           try {
-            const result = await this.messageHandler({ chatId, text });
-            if (result && result.text) {
-              await ctx.reply(result.text);
-            }
+            await this.messageHandler({
+              chatId,
+              text,
+              callback: async (msg) => {
+                const replyText = typeof msg === 'string' ? msg : msg?.text;
+                if (replyText) {
+                  await ctx.reply(replyText);
+                }
+              }
+            });
           } catch (err) {
             console.error('[telegram] Error processing message:', err.message);
           }

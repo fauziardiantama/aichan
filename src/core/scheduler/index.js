@@ -75,7 +75,12 @@ export class Scheduler {
       deciderModel: provider,
       toolModel: provider,
       context,
-      database: this.database
+      database: this.database,
+      callback: async (msg) => {
+        if (targetChatId && adapters[platform] && typeof adapters[platform].sendMessage === 'function') {
+          await adapters[platform].sendMessage(targetChatId, msg.text);
+        }
+      }
     });
 
     const updatedTask = this.database.getTask(task.id);

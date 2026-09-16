@@ -51,13 +51,17 @@ try {
 
   // 1. Test Direct Chat (Stage 1)
   console.log('1. Testing direct chat (no tools)...');
-  const chatRes = await engine.chat({
+  const directMessages = [];
+  await engine.chat({
     platform: 'web',
     chatId: 'web_1',
-    text: 'Hello Ai-Chan'
+    text: 'Hello Ai-Chan',
+    callback: async (msg) => {
+      directMessages.push(msg);
+    }
   });
-  if (chatRes.text !== 'Direct answer: Hello Ai-Chan') {
-    throw new Error('Direct chat response mismatch: ' + chatRes.text);
+  if (directMessages.length !== 1 || directMessages[0].text !== 'Direct answer: Hello Ai-Chan') {
+    throw new Error('Direct chat response mismatch: ' + JSON.stringify(directMessages));
   }
   const chatMessages = engine.storage.getChatMessages(1);
   if (chatMessages.length !== 2) { // 1 user + 1 assistant
@@ -67,15 +71,19 @@ try {
 
   // 2. Test Tool Escalation (Stage 2)
   console.log('2. Testing tool escalation chat...');
-  const toolRes = await engine.chat({
+  const toolMessages = [];
+  await engine.chat({
     platform: 'web',
     chatId: 'web_1',
-    text: 'Please need tool to check'
+    text: 'Please need tool to check',
+    callback: async (msg) => {
+      toolMessages.push(msg);
+    }
   });
-  if (!toolRes.text.includes('Tool finished')) {
-    throw new Error('Tool escalation response mismatch: ' + toolRes.text);
+  if (toolMessages.length !== 2 || !toolMessages[1].text.includes('Tool finished')) {
+    throw new Error('Tool escalation response mismatch: ' + JSON.stringify(toolMessages));
   }
-  console.log('✓ Tool escalation OK');
+  console.log('✓ Tool escalation OK (Stage 1 and Stage 2 received via callback)');
 
   // 3. Test Scheduler Tick
   console.log('3. Testing scheduler tick...');

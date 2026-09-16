@@ -26,7 +26,8 @@ export async function runPipeline({
   chatId,
   promptCodename,
   context = {},
-  database = null
+  database = null,
+  callback
 }) {
   const db = database || context.storage;
   let chat = null;
@@ -89,9 +90,17 @@ export async function runPipeline({
     });
   }
 
-  // Jika tidak butuh tool, langsung kembalikan jawaban
+  if (decision.response_text) {
+    await callback({
+      text: decision.response_text,
+      stage: 1,
+      isFinal: !decision.need_tool
+    });
+  }
+
+  // Jika tidak butuh tool, proses selesai
   if (!decision.need_tool) {
-    return { text: decision.response_text, chatId: chat?.chat_id || null };
+    return;
   }
 
   // --- STAGE 2: Eskalasi ke Model Tools (tools: true) ---
@@ -149,7 +158,12 @@ export async function runPipeline({
           promptCodename: promptCodename || chat.prompt_codename || null
         });
       }
-      return { text: response.text, chatId: chat?.chat_id || null };
+      await callback({
+        text: response.text,
+        stage: 2,
+        isFinal: true
+      });
+      return;
     }
 
     let parentAssistantId = null;
@@ -230,7 +244,11 @@ export async function runPipeline({
       promptCodename: promptCodename || chat.prompt_codename || null
     });
   }
-  return { text: finalLimitText, chatId: chat?.chat_id || null };
+  await callback({
+    text: finalLimitText,
+    stage: 2,
+    isFinal: true
+  });
 }
 
 export default {

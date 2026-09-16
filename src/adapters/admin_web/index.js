@@ -238,18 +238,31 @@ export class AdminWebAdapter {
           if (!this.engine) return sendJson(res, 503, { error: 'Engine unavailable.' });
           try {
             const { module: moduleName, prompt, model, chatId, platform = 'web', promptCodename } = await readBody(req);
-            const result = await this.engine.chat({
+            res.writeHead(200, {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              'Connection': 'keep-alive'
+            });
+            await this.engine.chat({
               platform,
               chatId: chatId || 'web-playground',
               text: prompt,
               model,
               promptCodename,
-              providerKey: moduleName
+              providerKey: moduleName,
+              callback: async (msg) => {
+                res.write(`data: ${JSON.stringify(msg)}\n\n`);
+              }
             });
-            return sendJson(res, 200, { text: result.text, model });
+            res.end();
           } catch (err) {
-            return sendJson(res, 500, { error: err.message });
+            if (!res.headersSent) {
+              return sendJson(res, 500, { error: err.message });
+            }
+            res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+            res.end();
           }
+          return;
         }
 
         // 8. Static Files & Vendor Libraries
